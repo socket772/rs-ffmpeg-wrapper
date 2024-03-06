@@ -1,5 +1,6 @@
 use clap::Parser;
-use std::{clone, fs};
+use std::fs;
+use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::thread::{self};
 
@@ -30,53 +31,40 @@ fn main() {
 	let input_folder:String = args.input;
 	let output_folder:String = args.output;
 
-	// Creazione delle cartelle nel caso non esistano
-	let input_folder_result = fs::create_dir_all(input_folder.clone());
-	if input_folder_result.is_ok() {
-		println!("Cartella input creata: {}", input_folder)
-	} else {
-		panic!("Cartella input non creata: {}", input_folder)
+	// Controllo se esiste la cartella di input
+	if !Path::new(input_folder.clone().as_str()).exists() {
+		panic!("La cartella di input non esiste")
 	}
 
+	// Creo la cartella di output nel caso non esiste, se esiste continua
 	let output_folder_result = fs::create_dir_all(output_folder.clone());
-	if output_folder_result.is_ok() {
+	if output_folder_result.is_ok() || Path::new(output_folder.clone().as_str()).exists() {
 		println!("Cartella output creata: {}", output_folder)
 	} else {
 		panic!("Cartella output non creata: {}", output_folder)
 	}
 
-	// Instanzio il lucchetto Mutex che userò per accedere al contatore
-	// Devo usare Atomic reference counting, in questo caso è il migliore per gestire la concorrenza
-	let mutex_lock = Arc::new(Mutex::new(0));
+	// Creo una lista iteratore di stringhe con le canzoni
+	let mut lista_canzoni = fs::read_dir(input_folder.clone()).unwrap();
 
-	// Devo impostare il valore iniziale del contatore, quindi prendo il contatore con lock
-	let mut contatore = mutex_lock.lock().unwrap();
-	// Imposto il valore del contatore
-	*contatore = threadcount;
-	// Cancello la variabile contatore con drop. Questo è l'equivalente di lock, la funzione si limita a cancellare la variabile
-	drop(contatore);
+	// Instanzio il lucchetto Mutex che usero per accedere al contatore della lista
+	let mutex_lock = Arc::new(Mutex::new(lista_canzoni));
 
-	// Creo un vettore mutabile che conterrà tutte le informazioni di tutti i thread. Esso serve per effettuare il join, altrimenti il programma esce prima di aver finito tutti i thread
+	// Vettore mutabile per gestire i thread, specialmente la parte di join
 	let mut thread_vector: Vec<thread::JoinHandle<()>> = vec![];
 
-	// In questo ciclo for vengono fatti partire i thread, non verranno eseguiti in ordine ovviamente
-	for numero in 0..num_cpus::get() {
+	for _ in 0..threadcount {
 		// Creo una copia del lock
 		let mutex_lock = Arc::clone(&mutex_lock);
 
 		// Qui metto in nuovo thread nell'array, è come una lista.
 		thread_vector.push(thread::spawn(move || {
-			// Instanzio il contatore protetto dal mutex_lock e chiudo il lucchetto
-			let mut contatore = mutex_lock.lock().unwrap();
 
-			// Effettuo l'operazione voluta
-			println!(
-				"Io sono il processo figlio {}, {}->{}",
-				numero,
-				*contatore,
-				*contatore + 1
-			);
-			*contatore += 1;
+			// Instanzio il contatore protetto dal mutex_lock e chiudo il lucchetto
+			let mut lista_canzoni = mutex_lock.lock().unwrap();
+			
+			let canzone = (*lista_canzoni).next().unwrap().unwrap().path();
+			
 		}));
 	}
 
@@ -85,21 +73,4 @@ fn main() {
 		let _ = thread_element.join();
 	}
 
-	println!("Risultato finale = {}", *mutex_lock.lock().unwrap());
-	println!("Risultato aspettato = {}", 2 * num_cpus::get());
 }
-
-/*
-fn esegui_comando(numero: usize) {
-
-	let comando_string:String = format!("echo {}", numero);
-
-	let comando = Command::new("sh")
-	.arg("-c")
-	.arg(comando_string)
-	.output()
-	.expect("Non sono riuscito ad eseguire il processo");
-
-	println!("{:?}", comando);
-}
-*/
