@@ -1,5 +1,7 @@
 use clap::Parser;
+use std::borrow::Borrow;
 use std::fs;
+use std::ops::Deref;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::thread::{self};
@@ -45,10 +47,19 @@ fn main() {
 	}
 
 	// Creo una lista iteratore di stringhe con le canzoni
-	let mut lista_canzoni = fs::read_dir(input_folder.clone()).unwrap();
+	let lista_canzoni = fs::read_dir(input_folder.clone()).unwrap();
+	let mut array_canzoni:Vec<String> = vec!["".to_string()];
+	// La converto in un array, altrimenti non riesco a passarla ai thread
+	for elemento in lista_canzoni {
+		array_canzoni.push(elemento.unwrap().file_name().into_string().unwrap())
+	}
 
-	// Instanzio il lucchetto Mutex che usero per accedere al contatore della lista
-	let mutex_lock = Arc::new(Mutex::new(lista_canzoni));
+
+	// Perndo il numero di canzoni nella cartella
+	let numero_canzoni = array_canzoni.capacity();
+
+	// Instanzio il lucchetto Mutex che usero per accedere al contatore della lista, 
+	let mutex_lock = Arc::new(Mutex::new(0));
 
 	// Vettore mutabile per gestire i thread, specialmente la parte di join
 	let mut thread_vector: Vec<thread::JoinHandle<()>> = vec![];
@@ -58,13 +69,25 @@ fn main() {
 		let mutex_lock = Arc::clone(&mutex_lock);
 
 		// Qui metto in nuovo thread nell'array, è come una lista.
-		thread_vector.push(thread::spawn(move || {
+		thread_vector.push(thread::spawn(|| {
 
-			// Instanzio il contatore protetto dal mutex_lock e chiudo il lucchetto
-			let mut lista_canzoni = mutex_lock.lock().unwrap();
-			
-			let canzone = (*lista_canzoni).next().unwrap().unwrap().path();
-			
+			// Ciclo che passa tutte le canzoni se necessario, quasi garantito che esca prima
+			for _ in 0..numero_canzoni {
+				// Instanzio il contatore protetto dal mutex_lock e chiudo il lucchetto
+				let mut contatore = mutex_lock.lock().unwrap();
+				if *contatore > numero_canzoni {
+					drop(contatore);
+					break;
+				}
+				
+				// Copio il valore del contatore prima di aumentarlo per il prossimo thread
+				let posizione = *contatore;
+				*contatore = *contatore + 1;
+				drop(contatore);
+
+				let nome_canzone:String = array_canzoni[posizione].clone();
+
+			}
 		}));
 	}
 
