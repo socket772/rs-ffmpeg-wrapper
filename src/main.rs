@@ -1,9 +1,8 @@
-use clap::Parser;
-use std::borrow::Borrow;
+use clap::{Parser};
 use std::fs;
-use std::ops::Deref;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
+use std::process::Command;
 use std::thread::{self};
 
 static DEFAULT_INPUT:&str = "./input";
@@ -23,6 +22,16 @@ struct Args {
 	/// cartella output
 	#[arg(short, long, default_value = DEFAULT_OUTPUT)]
 	output: String,
+}
+
+// Creo una struct per poter condividere le informazioni con i miei thread
+struct Canzoni {
+	// Vettore delle canzoni
+	vettore_canzoni: Vec<String>,
+	// Numero di canzoni nella lista
+	numero_canzoni: usize,
+	// Contatore di posizione
+	posizione: usize
 }
 
 fn main() {
@@ -48,46 +57,62 @@ fn main() {
 
 	// Creo una lista iteratore di stringhe con le canzoni
 	let lista_canzoni = fs::read_dir(input_folder.clone()).unwrap();
-	let mut array_canzoni:Vec<String> = vec!["".to_string()];
+	let mut array_canzoni_temp:Vec<String> = vec!["".to_string()];
 	// La converto in un array, altrimenti non riesco a passarla ai thread
 	for elemento in lista_canzoni {
-		array_canzoni.push(elemento.unwrap().file_name().into_string().unwrap())
+		array_canzoni_temp.push(elemento.unwrap().file_name().into_string().unwrap())
 	}
 
-
 	// Perndo il numero di canzoni nella cartella
-	let numero_canzoni = array_canzoni.capacity();
+	let numero_canzoni = array_canzoni_temp.capacity();
 
-	// Instanzio il lucchetto Mutex che usero per accedere al contatore della lista, 
-	let mutex_lock = Arc::new(Mutex::new(0));
+	// Instanzio la struct
+	let dati_condivisi:Canzoni = Canzoni {
+		vettore_canzoni: array_canzoni_temp,
+		numero_canzoni: numero_canzoni,
+		posizione: 0
+	};
+
+	// Instanzio il lucchetto Mutex che usero per accedere ai dati condivisi
+	let mutex_lock = Arc::new(Mutex::new(dati_condivisi));
 
 	// Vettore mutabile per gestire i thread, specialmente la parte di join
 	let mut thread_vector: Vec<thread::JoinHandle<()>> = vec![];
 
 	for _ in 0..threadcount {
-		// Creo una copia del lock
-		let mutex_lock = Arc::clone(&mutex_lock);
+		// Necessario, se no non posso utilizzarlo (capisci perchè)
+		let mutex_lock = mutex_lock.clone();
 
 		// Qui metto in nuovo thread nell'array, è come una lista.
-		thread_vector.push(thread::spawn(|| {
-
+		thread_vector.push(thread::spawn(move || {
+			
 			// Ciclo che passa tutte le canzoni se necessario, quasi garantito che esca prima
 			for _ in 0..numero_canzoni {
 				// Instanzio il contatore protetto dal mutex_lock e chiudo il lucchetto
-				let mut contatore = mutex_lock.lock().unwrap();
-				if *contatore > numero_canzoni {
-					drop(contatore);
+				let mut dati_condivisi = mutex_lock.lock().unwrap();
+
+				// Copio le variabili che mi servono dalla struct
+				let posizione_temp = dati_condivisi.posizione;
+				let numero_canzoni_temp = dati_condivisi.numero_canzoni;
+				let vettore_canzoni_temp = dati_condivisi.vettore_canzoni.clone();
+
+				// Controllo se ci sono altre canzoni da convertire
+				if posizione_temp > numero_canzoni_temp {
+					drop(dati_condivisi);
 					break;
 				}
 				
-				// Copio il valore del contatore prima di aumentarlo per il prossimo thread
-				let posizione = *contatore;
-				*contatore = *contatore + 1;
-				drop(contatore);
+				// Aumento di 1 il contatore globale
+				dati_condivisi.posizione = dati_condivisi.posizione + 1;
+				drop(dati_condivisi);
 
-				let nome_canzone:String = array_canzoni[posizione].clone();
+				let nome_canzone = vettore_canzoni_temp[posizione_temp].clone();
 
+				let command_result = Command::new("ffmpeg")
+				.args(["-i", format!("{}/{}", input_folder, nome_canzone).as_str(),"-c:v", "copy", "-c:a", "libmp3lame", "-q:a", "4", "-threads", format!("{}/{}", input_folder, nome_canzone).as_str()]);
 			}
+
+			println!("Un thread ha finito")
 		}));
 	}
 
