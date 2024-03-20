@@ -15,13 +15,17 @@ struct Args {
 	#[arg(short, long, default_value_t = num_cpus::get())]
 	threadcount: usize,
 
-	/// cartella input
+	// cartella input
 	#[arg(short, long, default_value = DEFAULT_INPUT)]
 	input: String,
 
-	/// cartella output
+	// cartella output
 	#[arg(short, long, default_value = DEFAULT_OUTPUT)]
 	output: String,
+
+	// specifica la posizione di ffmpeg
+	#[arg(short, long, default_value = "ffmpeg")]
+	program: String,
 }
 
 // Creo una struct per poter condividere le informazioni con i miei thread
@@ -34,8 +38,10 @@ struct Canzoni {
 	posizione: usize,
 	// Cartella di input
 	input_folder: String,
-	// Cartella di input
-	output_folder: String
+	// Cartella di output
+	output_folder: String,
+	// Percorso di ffmpeg
+	program: String
 }
 
 fn main() {
@@ -75,13 +81,17 @@ fn main() {
 		return;
 	}
 
+	// Recupero percorso di ffmpeg
+	let program = args.program;
+	
 	// Instanzio la struct
 	let dati_condivisi:Canzoni = Canzoni {
 		vettore_canzoni: array_canzoni_temp,
 		numero_canzoni: numero_canzoni,
 		posizione: 0,
 		input_folder: input_folder_arg,
-		output_folder: output_folder_arg
+		output_folder: output_folder_arg,
+		program: program
 	};
 
 	// Instanzio il lucchetto Mutex che usero per accedere ai dati condivisi
@@ -108,6 +118,7 @@ fn main() {
 				let vettore_canzoni_temp = dati_condivisi.vettore_canzoni.clone();
 				let input_folder = dati_condivisi.input_folder.clone();
 				let output_folder = dati_condivisi.output_folder.clone();
+				let program_temp = dati_condivisi.program.clone();
 
 				println!("Iniziata  {}: {}/{}",process::id() , posizione_temp, numero_canzoni_temp);
 
@@ -127,16 +138,15 @@ fn main() {
 				// Creo il percorso del file di input e output
 				let canzone_input_path = format!("{}/{}", input_folder, nome_canzone);
 				let canzone_output_path = format!("{}/{}.mp3", output_folder, nome_canzone);
-				
-				// Avvio ffmpeg
-				let command_result = Command::new("ffmpeg")
-				.args(["-i", canzone_input_path.as_str(),"-c:v", "copy", "-c:a", "libmp3lame", "-q:a", "4", "-threads", "4", canzone_output_path.as_str()]).spawn();
 
-				// In caso di errore termina il thread
+				let argomenti = ["-i", canzone_input_path.as_str(),"-c:v", "copy", "-c:a", "libmp3lame", "-q:a", "4", "-threads", "4", canzone_output_path.as_str()];
+				
+				let command_result = Command::new(program_temp).args(argomenti).spawn();
 				if command_result.is_err(){
 					println!("Errore nel thread {}, esco", process::id());
 					break;
 				}
+				
 				println!("Finito  {}: {}/{}",process::id() , posizione_temp, numero_canzoni_temp);
 			}
 
