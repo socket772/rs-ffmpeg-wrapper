@@ -1,5 +1,5 @@
 [package]
-name = "rust-multithreading-test"
+name = "rs-ffmpeg-mp3-wrapper"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,5 +8,3 @@ edition = "2021"
 [dependencies]
 clap = { version = "4.5.1", features = ["derive"] }
 num_cpus = "1.16.0"
-process_path = "0.1.4"
-sysinfo = "0.30.5"
