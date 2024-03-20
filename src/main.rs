@@ -1,5 +1,5 @@
-use clap::{Parser};
-use std::fs;
+use clap::Parser;
+use std::{fs, process};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::process::Command;
@@ -31,7 +31,11 @@ struct Canzoni {
 	// Numero di canzoni nella lista
 	numero_canzoni: usize,
 	// Contatore di posizione
-	posizione: usize
+	posizione: usize,
+	// Cartella di input
+	input_folder: String,
+	// Cartella di input
+	output_folder: String
 }
 
 fn main() {
@@ -39,24 +43,24 @@ fn main() {
 	// Instazio la variabile contenente gli argomenti
 	let args = Args::parse();
 	let threadcount:usize = args.threadcount;
-	let input_folder:String = args.input;
-	let output_folder:String = args.output;
+	let input_folder_arg:String = args.input;
+	let output_folder_arg:String = args.output;
 
 	// Controllo se esiste la cartella di input
-	if !Path::new(input_folder.clone().as_str()).exists() {
+	if !Path::new(input_folder_arg.clone().as_str()).exists() {
 		panic!("La cartella di input non esiste")
 	}
 
 	// Creo la cartella di output nel caso non esiste, se esiste continua
-	let output_folder_result = fs::create_dir_all(output_folder.clone());
-	if output_folder_result.is_ok() || Path::new(output_folder.clone().as_str()).exists() {
-		println!("Cartella output creata: {}", output_folder)
+	let output_folder_result = fs::create_dir_all(output_folder_arg.clone());
+	if output_folder_result.is_ok() || Path::new(output_folder_arg.clone().as_str()).exists() {
+		println!("Cartella output creata: {}", output_folder_arg)
 	} else {
-		panic!("Cartella output non creata: {}", output_folder)
+		panic!("Cartella output non creata: {}", output_folder_arg)
 	}
 
 	// Creo una lista iteratore di stringhe con le canzoni
-	let lista_canzoni = fs::read_dir(input_folder.clone()).unwrap();
+	let lista_canzoni = fs::read_dir(input_folder_arg.clone()).unwrap();
 	let mut array_canzoni_temp:Vec<String> = vec!["".to_string()];
 	// La converto in un array, altrimenti non riesco a passarla ai thread
 	for elemento in lista_canzoni {
@@ -66,11 +70,18 @@ fn main() {
 	// Perndo il numero di canzoni nella cartella
 	let numero_canzoni = array_canzoni_temp.capacity();
 
+	if numero_canzoni == 0 {
+		println!("Non ci sono canzoni nella cartella di input.");
+		return;
+	}
+
 	// Instanzio la struct
 	let dati_condivisi:Canzoni = Canzoni {
 		vettore_canzoni: array_canzoni_temp,
 		numero_canzoni: numero_canzoni,
-		posizione: 0
+		posizione: 0,
+		input_folder: input_folder_arg,
+		output_folder: output_folder_arg
 	};
 
 	// Instanzio il lucchetto Mutex che usero per accedere ai dati condivisi
@@ -95,6 +106,10 @@ fn main() {
 				let posizione_temp = dati_condivisi.posizione;
 				let numero_canzoni_temp = dati_condivisi.numero_canzoni;
 				let vettore_canzoni_temp = dati_condivisi.vettore_canzoni.clone();
+				let input_folder = dati_condivisi.input_folder.clone();
+				let output_folder = dati_condivisi.output_folder.clone();
+
+				println!("Iniziata  {}: {}/{}",process::id() , posizione_temp, numero_canzoni_temp);
 
 				// Controllo se ci sono altre canzoni da convertire
 				if posizione_temp > numero_canzoni_temp {
@@ -106,10 +121,23 @@ fn main() {
 				dati_condivisi.posizione = dati_condivisi.posizione + 1;
 				drop(dati_condivisi);
 
+				// Estraggo il nome della canzione
 				let nome_canzone = vettore_canzoni_temp[posizione_temp].clone();
 
+				// Creo il percorso del file di input e output
+				let canzone_input_path = format!("{}/{}", input_folder, nome_canzone);
+				let canzone_output_path = format!("{}/{}.mp3", output_folder, nome_canzone);
+				
+				// Avvio ffmpeg
 				let command_result = Command::new("ffmpeg")
-				.args(["-i", format!("{}/{}", input_folder, nome_canzone).as_str(),"-c:v", "copy", "-c:a", "libmp3lame", "-q:a", "4", "-threads", format!("{}/{}", input_folder, nome_canzone).as_str()]);
+				.args(["-i", canzone_input_path.as_str(),"-c:v", "copy", "-c:a", "libmp3lame", "-q:a", "4", "-threads", "4", canzone_output_path.as_str()]).spawn();
+
+				// In caso di errore termina il thread
+				if command_result.is_err(){
+					println!("Errore nel thread {}, esco", process::id());
+					break;
+				}
+				println!("Finito  {}: {}/{}",process::id() , posizione_temp, numero_canzoni_temp);
 			}
 
 			println!("Un thread ha finito")
@@ -120,5 +148,8 @@ fn main() {
 	for thread_element in thread_vector {
 		let _ = thread_element.join();
 	}
+
+
+	return
 
 }
