@@ -85,6 +85,7 @@ fn main() {
 	let program = args.program;
 	
 	// Instanzio la struct
+	// Nelle prossime versioni trasformerò tutto in una Lista
 	let dati_condivisi:Canzoni = Canzoni {
 		vettore_canzoni: array_canzoni_temp,
 		numero_canzoni: numero_canzoni,
@@ -158,8 +159,5 @@ fn main() {
 	for thread_element in thread_vector {
 		let _ = thread_element.join();
 	}
-
-
 	return
-
 }

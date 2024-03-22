@@ -18,6 +18,19 @@ cargo build
 ### Windows
 Supporto esplicito per windows non ancora implementato, arriverà presto
 
+Seguite questo [link](https://learn.microsoft.com/en-us/windows/dev-environment/rust/setup#install-rust) della Microsoft
+
+Comunque bisognerà
+
+Clonare il repository
+```sh
+git clone "https://github.com/socket772/rs-ffmpeg-mp3-wrapper"
+```
+
+Compilare il progetto utilizzando cargo
+```sh
+cargo bui
+
 ## Esecuzione
 > [!CAUTION]
 > Questo processo cambierà in futuro, come priorità attuale c'è il testing del programma
@@ -31,6 +44,7 @@ oppure estrarre l'eseguibile `target/debug/rs-ffmpeg-mp3-wrapper` dopo aver eseg
 
 ### Windows
 Supporto esplicito per windows non ancora implementato, arriverà presto
+Seguite questo [link](https://learn.microsoft.com/en-us/windows/dev-environment/rust/setup#install-rust) della Microsoft 
 
 ## Licenza
 Contenuta nel file LICENCE.md
