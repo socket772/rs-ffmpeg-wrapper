@@ -29,7 +29,8 @@ git clone "https://github.com/socket772/rs-ffmpeg-mp3-wrapper"
 
 Compilare il progetto utilizzando cargo
 ```sh
-cargo bui
+cargo build
+```
 
 ## Esecuzione
 > [!CAUTION]
