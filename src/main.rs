@@ -1,5 +1,5 @@
 use clap::Parser;
-use std::{fs, process};
+use std::fs;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::process::Command;
@@ -67,14 +67,17 @@ fn main() {
 
 	// Creo una lista iteratore di stringhe con le canzoni
 	let lista_canzoni = fs::read_dir(input_folder_arg.clone()).unwrap();
+	
 	let mut array_canzoni_temp:Vec<String> = vec!["".to_string()];
 	// La converto in un array, altrimenti non riesco a passarla ai thread
 	for elemento in lista_canzoni {
-		array_canzoni_temp.push(elemento.unwrap().file_name().into_string().unwrap())
+		array_canzoni_temp.push(elemento.unwrap().file_name().into_string().unwrap());
 	}
 
+	println!("DEBUG: \n {:?}", array_canzoni_temp);
+
 	// Perndo il numero di canzoni nella cartella
-	let numero_canzoni = array_canzoni_temp.capacity();
+	let numero_canzoni = array_canzoni_temp.len();
 
 	if numero_canzoni == 0 {
 		println!("Non ci sono canzoni nella cartella di input.");
@@ -121,10 +124,9 @@ fn main() {
 				let output_folder = dati_condivisi.output_folder.clone();
 				let program_temp = dati_condivisi.program.clone();
 
-				println!("Iniziata  {}: {}/{}",process::id() , posizione_temp, numero_canzoni_temp);
-
+				
 				// Controllo se ci sono altre canzoni da convertire
-				if posizione_temp > numero_canzoni_temp {
+				if posizione_temp >= numero_canzoni_temp {
 					drop(dati_condivisi);
 					break;
 				}
@@ -132,7 +134,9 @@ fn main() {
 				// Aumento di 1 il contatore globale
 				dati_condivisi.posizione = dati_condivisi.posizione + 1;
 				drop(dati_condivisi);
-
+				
+				println!("Iniziata {}/{}", posizione_temp+1, numero_canzoni_temp);
+				
 				// Estraggo il nome della canzione
 				let nome_canzone = vettore_canzoni_temp[posizione_temp].clone();
 
@@ -140,15 +144,15 @@ fn main() {
 				let canzone_input_path = format!("{}/{}", input_folder, nome_canzone);
 				let canzone_output_path = format!("{}/{}.mp3", output_folder, nome_canzone);
 
-				let argomenti = ["-i", canzone_input_path.as_str(),"-c:v", "copy", "-c:a", "libmp3lame", "-q:a", "4", "-threads", "4", canzone_output_path.as_str()];
+				let argomenti = ["-loglevel", "panic", "-nostats", "-i", canzone_input_path.as_str(),"-c:v", "copy", "-c:a", "libmp3lame", "-q:a", "4", "-threads", "4", canzone_output_path.as_str()];
 				
 				let command_result = Command::new(program_temp).args(argomenti).spawn();
 				if command_result.is_err(){
-					println!("Errore nel thread {}, esco", process::id());
+					println!("Errore nel thread, esco");
 					break;
 				}
 				
-				println!("Finito  {}: {}/{}",process::id() , posizione_temp, numero_canzoni_temp);
+				println!("Finito {}/{}",posizione_temp+1, numero_canzoni_temp);
 			}
 
 			println!("Un thread ha finito")
