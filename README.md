@@ -34,18 +34,11 @@ cargo build
 
 ## Esecuzione
 > [!CAUTION]
-> Questo processo cambierà in futuro, come priorità attuale c'è il testing del programma
+> Questa sezione è ancora WIP
 
 ### Linux
-Eseguirlo tramite cargo
-```sh
-cargo run
-```
-oppure estrarre l'eseguibile `target/debug/rs-ffmpeg-mp3-wrapper` dopo aver eseguito `cargo build`
 
 ### Windows
-Supporto esplicito per windows non ancora implementato, arriverà presto
-Seguite questo [link](https://learn.microsoft.com/en-us/windows/dev-environment/rust/setup#install-rust) della Microsoft 
 
 ## Licenza
 Contenuta nel file LICENCE.md
