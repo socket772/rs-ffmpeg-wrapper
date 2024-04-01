@@ -74,8 +74,6 @@ fn main() {
 		array_canzoni_temp.push(elemento.unwrap().file_name().into_string().unwrap());
 	}
 
-	println!("DEBUG: \n {:?}", array_canzoni_temp);
-
 	// Perndo il numero di canzoni nella cartella
 	let numero_canzoni = array_canzoni_temp.len();
 
