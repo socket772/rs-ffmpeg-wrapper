@@ -151,8 +151,8 @@ fn main() {
 				let canzone_input_path = format!("{}/{}", input_folder, nome_canzone);
 				let canzone_output_path = format!("{}/{}.mp3", output_folder, nome_canzone);
 
+				// Selezione se sovrascrivere o no i file
 				let mut sovrascrivi_arg = "-n";
-
 				if sovrascrivi_temp {
 					sovrascrivi_arg = "-y";
 				}
