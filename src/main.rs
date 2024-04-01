@@ -132,7 +132,7 @@ fn main() {
 				}
 				
 				// Aumento di 1 il contatore globale
-				dati_condivisi.posizione = dati_condivisi.posizione + 1;
+				dati_condivisi.posizione += 1;
 				drop(dati_condivisi);
 				
 				println!("Iniziata {}/{}", posizione_temp+1, numero_canzoni_temp);
@@ -146,8 +146,8 @@ fn main() {
 
 				let argomenti = ["-loglevel", "panic", "-nostats", "-i", canzone_input_path.as_str(),"-c:v", "copy", "-c:a", "libmp3lame", "-q:a", "4", "-threads", "4", canzone_output_path.as_str()];
 				
-				let command_result = Command::new(program_temp).args(argomenti).spawn();
-				if command_result.is_err(){
+				let command = Command::new(program_temp).args(argomenti).spawn().unwrap().wait();
+				if command.is_err(){
 					println!("Errore nel thread, esco");
 					break;
 				}
@@ -163,5 +163,4 @@ fn main() {
 	for thread_element in thread_vector {
 		let _ = thread_element.join();
 	}
-	return
 }
