@@ -142,10 +142,10 @@ fn main() {
 				dati_condivisi.posizione += 1;
 				drop(dati_condivisi);
 				
-				println!("Iniziata {}/{}", posizione_temp+1, numero_canzoni_temp);
-				
 				// Estraggo il nome della canzione
 				let nome_canzone = vettore_canzoni_temp[posizione_temp].clone();
+
+				println!("Iniziata `{}` {}/{}", nome_canzone, posizione_temp+1, numero_canzoni_temp);
 
 				// Creo il percorso del file di input e output
 				let canzone_input_path = format!("{}/{}", input_folder, nome_canzone);
@@ -165,7 +165,7 @@ fn main() {
 					break;
 				}
 				
-				println!("Finito {}/{}",posizione_temp+1, numero_canzoni_temp);
+				println!("Finito `{}` {}/{}", nome_canzone, posizione_temp+1, numero_canzoni_temp);
 			}
 
 			println!("Un thread ha finito")
