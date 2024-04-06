@@ -59,9 +59,16 @@ fn main() {
 	let input_folder_arg:String = args.input;
 	let output_folder_arg:String = args.output;
 
+	// Se il numero di thread è 0, termina il programma
+	if threadcount == 0 {
+		println!("Numero di thread invalido, inserire un numero maggiore di 0");
+		return;
+	}
+
 	// Controllo se esiste la cartella di input
 	if !Path::new(input_folder_arg.clone().as_str()).exists() {
-		panic!("La cartella di input non esiste")
+		println!("La cartella di input non esiste");
+		return;
 	}
 
 	// Creo la cartella di output nel caso non esiste, se esiste continua
@@ -69,7 +76,8 @@ fn main() {
 	if output_folder_result.is_ok() || Path::new(output_folder_arg.clone().as_str()).exists() {
 		println!("Cartella output creata: {}", output_folder_arg)
 	} else {
-		panic!("Cartella output non creata: {}", output_folder_arg)
+		println!("Cartella output non creata: {}", output_folder_arg);
+		return;
 	}
 
 	// Creo una lista iteratore di stringhe con le canzoni
@@ -84,6 +92,7 @@ fn main() {
 	// Perndo il numero di canzoni nella cartella
 	let numero_canzoni = array_canzoni_temp.len();
 
+	// Se non ci sono canzoni, termina il programma
 	if numero_canzoni == 0 {
 		println!("Non ci sono canzoni nella cartella di input.");
 		return;
