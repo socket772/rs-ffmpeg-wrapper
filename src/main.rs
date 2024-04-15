@@ -170,7 +170,7 @@ fn main() {
 					sovrascrivi_arg = "-y";
 				}
 
-				let argomenti = [sovrascrivi_arg, "-loglevel", "panic", "-nostats", "-i", canzone_input_path.as_str(),"-c:v", "copy", "-c:a", "libmp3lame", "-q:a", "4", "-threads", "4", canzone_output_path.as_str()];
+				let argomenti = [sovrascrivi_arg, "-loglevel", "panic", "-nostats", "-i", canzone_input_path.as_str(), "-vn", canzone_output_path.as_str()];
 				
 				let command = Command::new(program_temp).args(argomenti).spawn().unwrap().wait();
 				if command.is_err(){
