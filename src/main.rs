@@ -35,8 +35,9 @@ struct Args {
 	// Formato del file
 	/*
 		cancella questa parte
-		Testati -> mp3, m4a, flac, ogg, wav, aac
+		Funzionanti -> mp3, m4a, flac, ogg, wav, aac, m4b, oga, opus, webm
 		Non Testati -> 
+		Non Funzionanti -> 3gp
 	*/
 	#[arg(short, long, default_value = "mp3", help="Definisci il  formato del file audio [mp3, m4a, flac, ogg, wav, aac]")]
 	formato: String
@@ -111,15 +112,16 @@ fn main() {
 
 	// Recupero percorso di ffmpeg
 	let program = args.program;
-	
+
+	// Controllo se l'estensione inserita è valtida
 	match args.formato.as_str() {
-		"mp3"|"m4a"|"flac"|"ogg"|"wav"|"aac"=>println!("{}", args.formato),
+		"mp3"|"m4a"|"flac"|"ogg"|"wav"|"aac"|"m4b"|"oga"|"opus"|"webm"=>println!("{}", args.formato),
 		_=>{
 			println!("Formato non supportato");
 			return
 		}
 	}
-	
+
 	// Instanzio la struct
 	// Nelle prossime versioni trasformerò tutto in una Lista
 	let dati_condivisi:Canzoni = Canzoni {
