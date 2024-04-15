@@ -31,6 +31,10 @@ struct Args {
 	// abilita la sovrascrittura dei file
 	#[clap(short, long, help="Definisci se sovrascrivere i file già esistenti")]
 	sovrascrivi: bool,
+	#[arg(short, long, default_value = "mp3", help="Definisci il  formato del file audio [mp3, m4a, flac, ogg, wav, aac]")]
+	format: String,
+
+	// Formato del file
 }
 
 // Creo una struct per poter condividere le informazioni con i miei thread
