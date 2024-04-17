@@ -31,6 +31,16 @@ struct Args {
 	// abilita la sovrascrittura dei file
 	#[clap(short, long, help="Definisci se sovrascrivere i file già esistenti")]
 	sovrascrivi: bool,
+
+	// Formato del file
+	/*
+		Questa sezione è solo per i test, non va considerata documentazione
+		Funzionanti ->
+		Non Testati ->
+		Non Funzionanti -> 3gp (estensione accettata ma chiede opzioni particolari)
+	*/
+	#[arg(short, long, default_value = "mp3", help="Definisci l'estensione del file audio [mp3, m4a, flac, ogg, wav, aac, m4b, oga, opus, webm]")]
+	formato: String
 }
 
 // Creo una struct per poter condividere le informazioni con i miei thread
@@ -48,7 +58,9 @@ struct Canzoni {
 	// Percorso di ffmpeg
 	program: String,
 	// Sovrascrittura abilitata
-	sovrascrivi: bool
+	sovrascrivi: bool,
+	// Formato file
+	formato: String
 }
 
 fn main() {
@@ -100,7 +112,16 @@ fn main() {
 
 	// Recupero percorso di ffmpeg
 	let program = args.program;
-	
+
+	// Controllo se l'estensione inserita è valtida
+	match args.formato.as_str() {
+		"mp3"|"m4a"|"flac"|"ogg"|"wav"|"aac"|"m4b"|"oga"|"opus"|"webm"=>println!("{}", args.formato),
+		_=>{
+			println!("Formato non supportato");
+			return
+		}
+	}
+
 	// Instanzio la struct
 	// Nelle prossime versioni trasformerò tutto in una Lista
 	let dati_condivisi:Canzoni = Canzoni {
@@ -110,7 +131,8 @@ fn main() {
 		input_folder: input_folder_arg,
 		output_folder: output_folder_arg,
 		program: program,
-		sovrascrivi: args.sovrascrivi
+		sovrascrivi: args.sovrascrivi,
+		formato: args.formato
 	};
 
 	// Instanzio il lucchetto Mutex che usero per accedere ai dati condivisi
@@ -139,6 +161,7 @@ fn main() {
 				let output_folder = dati_condivisi.output_folder.clone();
 				let program_temp = dati_condivisi.program.clone();
 				let sovrascrivi_temp = dati_condivisi.sovrascrivi;
+				let formato = dati_condivisi.formato.clone();
 
 				
 				// Controllo se ci sono altre canzoni da convertire
@@ -158,7 +181,7 @@ fn main() {
 
 				// Creo il percorso del file di input e output
 				let canzone_input_path = format!("{}/{}", input_folder, nome_canzone);
-				let canzone_output_path = format!("{}/{}.mp3", output_folder, nome_canzone);
+				let canzone_output_path = format!("{}/{}.{}", output_folder, nome_canzone, formato);
 
 				// Selezione se sovrascrivere o no i file
 				let mut sovrascrivi_arg = "-n";
@@ -166,7 +189,7 @@ fn main() {
 					sovrascrivi_arg = "-y";
 				}
 
-				let argomenti = [sovrascrivi_arg, "-loglevel", "panic", "-nostats", "-i", canzone_input_path.as_str(),"-c:v", "copy", "-c:a", "libmp3lame", "-q:a", "4", "-threads", "4", canzone_output_path.as_str()];
+				let argomenti = [sovrascrivi_arg, "-loglevel", "panic", "-nostats", "-i", canzone_input_path.as_str(), "-vn", canzone_output_path.as_str()];
 				
 				let command = Command::new(program_temp).args(argomenti).spawn().unwrap().wait();
 				if command.is_err(){
