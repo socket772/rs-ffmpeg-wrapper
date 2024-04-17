@@ -144,7 +144,7 @@ dependencies = [
 
 [[package]]
 name = "rs-ffmpeg-mp3-wrapper"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "clap",
  "num_cpus",
