@@ -34,12 +34,12 @@ struct Args {
 
 	// Formato del file
 	/*
-		cancella questa parte
-		Funzionanti -> mp3, m4a, flac, ogg, wav, aac, m4b, oga, opus, webm
-		Non Testati -> 
-		Non Funzionanti -> 3gp
+		Questa sezione è solo per i test, non va considerata documentazione
+		Funzionanti ->
+		Non Testati ->
+		Non Funzionanti -> 3gp (estensione accettata ma chiede opzioni particolari)
 	*/
-	#[arg(short, long, default_value = "mp3", help="Definisci il  formato del file audio [mp3, m4a, flac, ogg, wav, aac]")]
+	#[arg(short, long, default_value = "mp3", help="Definisci l'estensione del file audio [mp3, m4a, flac, ogg, wav, aac, m4b, oga, opus, webm]")]
 	formato: String
 }
 
