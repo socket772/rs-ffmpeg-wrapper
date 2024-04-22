@@ -150,54 +150,10 @@ fn main() {
 			
 			// Ciclo che passa tutte le canzoni se necessario, quasi garantito che esca prima
 			for _ in 0..numero_canzoni {
-				// Instanzio il contatore protetto dal mutex_lock e chiudo il lucchetto
-				let mut dati_condivisi = mutex_lock.lock().unwrap();
-
-				// Copio le variabili che mi servono dalla struct
-				let posizione_temp = dati_condivisi.posizione;
-				let numero_canzoni_temp = dati_condivisi.numero_canzoni;
-				let vettore_canzoni_temp = dati_condivisi.vettore_canzoni.clone();
-				let input_folder = dati_condivisi.input_folder.clone();
-				let output_folder = dati_condivisi.output_folder.clone();
-				let program_temp = dati_condivisi.program.clone();
-				let sovrascrivi_temp = dati_condivisi.sovrascrivi;
-				let formato = dati_condivisi.formato.clone();
-
-				
-				// Controllo se ci sono altre canzoni da convertire
-				if posizione_temp >= numero_canzoni_temp {
-					drop(dati_condivisi);
+				let result = thread_operation(&mutex_lock);
+				if result == 1 {
 					break;
 				}
-				
-				// Aumento di 1 il contatore globale
-				dati_condivisi.posizione += 1;
-				drop(dati_condivisi);
-				
-				// Estraggo il nome della canzione
-				let nome_canzone = vettore_canzoni_temp[posizione_temp].clone();
-
-				println!("Iniziata `{}` {}/{}", nome_canzone, posizione_temp+1, numero_canzoni_temp);
-
-				// Creo il percorso del file di input e output
-				let canzone_input_path = format!("{}/{}", input_folder, nome_canzone);
-				let canzone_output_path = format!("{}/{}.{}", output_folder, nome_canzone, formato);
-
-				// Selezione se sovrascrivere o no i file
-				let mut sovrascrivi_arg = "-n";
-				if sovrascrivi_temp {
-					sovrascrivi_arg = "-y";
-				}
-
-				let argomenti = [sovrascrivi_arg, "-loglevel", "panic", "-nostats", "-i", canzone_input_path.as_str(), "-vn", canzone_output_path.as_str()];
-				
-				let command = Command::new(program_temp).args(argomenti).spawn().unwrap().wait();
-				if command.is_err(){
-					println!("Errore nel thread, esco");
-					break;
-				}
-				
-				println!("Finito `{}` {}/{}", nome_canzone, posizione_temp+1, numero_canzoni_temp);
 			}
 
 			println!("Un thread ha finito")
@@ -210,53 +166,65 @@ fn main() {
 	}
 }
 
-fn thread_operation(mutex_lock: Arc<Mutex<Canzoni>>) -> i32 {
+// questa funzione contiene il codice eseguito dai thread
+fn thread_operation(mutex_lock: &Arc<Mutex<Canzoni>>) -> i32 {
+	// prendo il lucchetto mutex_lock
 	let mut dati_condivisi = mutex_lock.lock().unwrap();
 
-				// Copio le variabili che mi servono dalla struct
-				let posizione_temp = dati_condivisi.posizione;
-				let numero_canzoni_temp = dati_condivisi.numero_canzoni;
-				let vettore_canzoni_temp = dati_condivisi.vettore_canzoni.clone();
-				let input_folder = dati_condivisi.input_folder.clone();
-				let output_folder = dati_condivisi.output_folder.clone();
-				let program_temp = dati_condivisi.program.clone();
-				let sovrascrivi_temp = dati_condivisi.sovrascrivi;
-				let formato = dati_condivisi.formato.clone();
+	// Copio le variabili che mi servono dalla struct
+	let posizione_temp = dati_condivisi.posizione;
+	let numero_canzoni_temp = dati_condivisi.numero_canzoni;
+	let vettore_canzoni_temp = dati_condivisi.vettore_canzoni.clone();
+	let input_folder = dati_condivisi.input_folder.clone();
+	let output_folder = dati_condivisi.output_folder.clone();
+	let program_temp = dati_condivisi.program.clone();
+	let sovrascrivi_temp = dati_condivisi.sovrascrivi;
+	let formato = dati_condivisi.formato.clone();
 
-				
-				// Controllo se ci sono altre canzoni da convertire
-				if posizione_temp >= numero_canzoni_temp {
-					drop(dati_condivisi);
-					return 0;
-				}
-				
-				// Aumento di 1 il contatore globale
-				dati_condivisi.posizione += 1;
-				drop(dati_condivisi);
-				
-				// Estraggo il nome della canzione
-				let nome_canzone = vettore_canzoni_temp[posizione_temp].clone();
+	
+	// Controllo se ci sono altre canzoni da convertire
+	if posizione_temp >= numero_canzoni_temp {
+		drop(dati_condivisi);
+		return 1;
+	}
+	
+	// Aumento di 1 il contatore globale
+	dati_condivisi.posizione += 1;
+	drop(dati_condivisi);
+	
+	// Estraggo il nome della canzione
+	let nome_canzone = vettore_canzoni_temp[posizione_temp].clone();
 
-				println!("Iniziata `{}` {}/{}", nome_canzone, posizione_temp+1, numero_canzoni_temp);
+	// Annuncio inizio canzone
+	println!("Iniziata `{}` {}/{}", nome_canzone, posizione_temp+1, numero_canzoni_temp);
 
-				// Creo il percorso del file di input e output
-				let canzone_input_path = format!("{}/{}", input_folder, nome_canzone);
-				let canzone_output_path = format!("{}/{}.{}", output_folder, nome_canzone, formato);
+	// Creo il percorso del file di input e output
+	let canzone_input_path = format!("{}/{}", input_folder, nome_canzone);
+	let canzone_output_path = format!("{}/{}.{}", output_folder, nome_canzone, formato);
 
-				// Selezione se sovrascrivere o no i file
-				let mut sovrascrivi_arg = "-n";
-				if sovrascrivi_temp {
-					sovrascrivi_arg = "-y";
-				}
+	// Selezione se sovrascrivere o no i file
+	let mut sovrascrivi_arg = "-n";
+	if sovrascrivi_temp {
+		sovrascrivi_arg = "-y";
+	}
 
-				let argomenti = [sovrascrivi_arg, "-loglevel", "panic", "-nostats", "-i", canzone_input_path.as_str(), "-vn", canzone_output_path.as_str()];
-				
-				let command = Command::new(program_temp).args(argomenti).spawn().unwrap().wait();
-				if command.is_err() {
-					// metti questa print fuori dalla funzione
-					println!("Errore nel thread, esco");
-					return -1;
-				} else {
-					return 0;
-				}
+	/*
+		{sovrascrivi_arg} -> usato per scegliere se sovrascrivere file dallo stesso nome o no
+		-loglevel panic -> nascondi l'output
+		-nostats -> togli le statistiche
+		-vn -> rimuovi tutti i dati non relativi all'audio
+	 */
+	let argomenti = [sovrascrivi_arg, "-loglevel", "panic", "-nostats", "-i", canzone_input_path.as_str(), "-vn", canzone_output_path.as_str()];
+	
+	// Istanzio ed eseguo il comando di ffmpeg con le impostazioni scelte
+	let command = Command::new(program_temp).args(argomenti).spawn().unwrap().wait();
+	// Verifico risultato del comando
+	if command.is_err() {
+		// metti questa print fuori dalla funzione
+		println!("Errore nel thread, esco");
+		return -1;
+	} else {
+		println!("Finito `{}` {}/{}", nome_canzone, posizione_temp+1, numero_canzoni_temp);
+		return 0;
+	}
 }
