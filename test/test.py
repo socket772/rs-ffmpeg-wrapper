@@ -14,6 +14,10 @@ cartella_input: str = sys.argv[1]
 cartella_output: str = sys.argv[2]
 threads: str = sys.argv[3]
 
+pausa: str = input("Vuoi avere delle pause tra i test? (y/n)").lower()
+if pausa not in ["y", "n"]:
+	pausa: str = "n"
+
 # Print di debug
 # print("Estensioni: {} -> {}", estensioni, type(estensioni))
 # print("Input: {} -> {}", cartella_input, type(input))
@@ -31,7 +35,8 @@ def test_1():
 		subprocess.run(["cargo", "run", "-q", "--", "-i", cartella_input, "-o", cartella_output+"/debug_allformats_t", "-f", estensione, "-t", threads])
 
 	print("Test 1 finito")
-	input("Premi invio per continuare")
+	if pausa == "y":
+		input("Premi invio per continuare")
 
 # Test 2, conversione di tutte le estensioni ma i file sono presenti e non verranno sovrascritti
 def test_2():
@@ -43,7 +48,8 @@ def test_2():
 		subprocess.run(["cargo", "run", "-q", "--", "-i", cartella_input, "-o", cartella_output+"/debug_allformats_t", "-f", estensione, "-t", threads])
 
 	print("Test 2 finito")
-	input("Premi invio per continuare")
+	if pausa == "y":
+		input("Premi invio per continuare")
 
 # Test 3, conversione di tutte le estensioni ma i file sono presenti e verranno sovrascritti
 def test_3():
@@ -55,7 +61,8 @@ def test_3():
 		subprocess.run(["cargo", "run", "-q", "--", "-i", cartella_input, "-o", cartella_output+"/debug_allformats_t", "-f", estensione, "-t", threads, "-s"])
 
 	print("Test 3 finito")
-	input("Premi invio per continuare")
+	if pausa == "y":
+		input("Premi invio per continuare")
 
 def main():
 	print("Inizio dei test")
@@ -65,3 +72,4 @@ def main():
 
 if __name__ == "__main__":
 	main()
+	exit()
