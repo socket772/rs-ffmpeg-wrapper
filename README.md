@@ -7,7 +7,7 @@
 ### Linux
 Clonare il repository
 ```sh
-git clone "https://github.com/socket772/rs-ffmpeg-mp3-wrapper"
+git clone "https://github.com/socket772/rs-ffmpeg-wrapper"
 ```
 
 Compilare il progetto utilizzando cargo
@@ -24,7 +24,7 @@ Comunque bisognerà
 
 Clonare il repository
 ```sh
-git clone "https://github.com/socket772/rs-ffmpeg-mp3-wrapper"
+git clone "https://github.com/socket772/rs-ffmpeg-wrapper"
 ```
 
 Compilare il progetto utilizzando cargo
