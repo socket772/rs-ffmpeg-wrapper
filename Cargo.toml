@@ -1,5 +1,5 @@
 [package]
-name = "rs-ffmpeg-mp3-wrapper"
+name = "rs-ffmpeg-wrapper"
 version = "0.2.2"
 edition = "2021"
 
