@@ -1,10 +1,13 @@
 use clap::Parser;
+use iced::widget::{row, Button, Container, TextInput};
+use iced::{Sandbox, Settings};
 use std::env::{self};
 use std::fs;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::process::Command;
 use std::thread::{self};
+use iced::widget::column;
 
 static DEFAULT_INPUT:&str = "./input";
 static DEFAULT_OUTPUT:&str = "./output";
@@ -67,6 +70,71 @@ struct Canzoni {
 	formato: String
 }
 
+struct Gui {
+	input_folder: String,
+	output_folder: String,
+	threads: usize,
+	num_canzoni: usize,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum GuiMessage {
+	Start,
+}
+
+impl Sandbox for Gui {
+	type Message = GuiMessage;
+
+	fn theme(&self) -> iced::Theme {
+		iced::Theme::default()
+	}
+
+	fn style(&self) -> iced::theme::Application {
+		iced::theme::Application::default()
+	}
+
+	fn scale_factor(&self) -> f64 {
+		1.0
+	}
+
+	fn run(settings: iced::Settings<()>) -> Result<(), iced::Error>
+	where
+		Self: 'static + Sized,
+	{
+		<Self as iced::Application>::run(settings)
+	}
+	
+	fn new() -> Self {
+			Gui {
+				input_folder: "./input".to_string(),
+				output_folder: "./output".to_string(),
+				threads: num_cpus::get(),
+				num_canzoni: 0 
+			}
+		}
+	
+	fn title(&self) -> String {
+			String::from("rs-ffmpeg-wrapper GUI")
+		}
+	
+	fn update(&mut self, message: Self::Message) {
+			match message {
+				GuiMessage::Start => println!("Starting"),				
+			}
+		}
+	
+	fn view(&self) -> iced::Element<'_, Self::Message> {
+
+			//let row_input = row![];
+
+			let start_button = Button::new("Start").on_press(GuiMessage::Start);
+
+			let col = column![start_button];
+
+		return Container::new(col).center_x().center_y().width(iced::Length::Fill).height(iced::Length::Fill).into()
+		}
+}
+
 fn main() {
 	let _args: Vec<_> = env::args().collect();
 	if _args.len() > 1 {
@@ -80,7 +148,7 @@ fn main() {
 }
 
 fn main_gui() {
-
+	let _ = Gui::run(Settings::default());
 }
 
 fn main_headless() {
