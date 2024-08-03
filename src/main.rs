@@ -1,10 +1,10 @@
 use clap::Parser;
+use std::env::{self};
 use std::fs;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::process::Command;
 use std::thread::{self};
-use iced;
 
 static DEFAULT_INPUT:&str = "./input";
 static DEFAULT_OUTPUT:&str = "./output";
@@ -32,6 +32,11 @@ struct Args {
 	// abilita la sovrascrittura dei file
 	#[clap(short, long, help="Definisci se sovrascrivere i file già esistenti")]
 	sovrascrivi: bool,
+
+	// disabilita la gui
+	#[clap(long, help="Esegui il programma in modalità headless")]
+	nogui: bool,
+
 
 	// Formato del file
 	/*
@@ -63,75 +68,90 @@ struct Canzoni {
 }
 
 fn main() {
-
-	// Instazio la variabile contenente gli argomenti
-	let args = Args::parse();
-	let threadcount:usize = args.threadcount;
-	let input_folder_arg:String = args.input;
-	let output_folder_arg:String = args.output;
-
-	// Se il numero di thread è 0, termina il programma
-	if threadcount == 0 {
-		println!("Numero di thread invalido, inserire un numero maggiore di 0");
-		return;
+	let _args: Vec<_> = env::args().collect();
+	if _args.len() > 1 {
+		println!("Running in headless mode");
+		main_headless();
 	}
-
-	// Controllo se esiste la cartella di input
-	if !Path::new(input_folder_arg.clone().as_str()).exists() {
-		println!("La cartella di input non esiste");
-		return;
+	else {
+		println!("Running in gui mode");
+		main_gui();
 	}
+}
 
-	// Creo la cartella di output nel caso non esiste, se esiste continua
-	let output_folder_result = fs::create_dir_all(output_folder_arg.clone());
-	if output_folder_result.is_ok() || Path::new(output_folder_arg.clone().as_str()).exists() {
-		println!("Cartella output creata: {}", output_folder_arg)
-	} else {
-		println!("Cartella output non creata: {}", output_folder_arg);
-		return;
-	}
+fn main_gui() {
 
-	// Creo una lista iteratore di stringhe con le canzoni
-	let lista_canzoni = fs::read_dir(input_folder_arg.clone()).unwrap();
+}
+
+fn main_headless() {
+		// Instazio la variabile contenente gli argomenti
+		let args = Args::parse();
+		let threadcount:usize = args.threadcount;
+		let input_folder_arg:String = args.input;
+		let output_folder_arg:String = args.output;
 	
-	let mut array_canzoni_temp:Vec<String> = vec![];
-	// La converto in un array, altrimenti non riesco a passarla ai thread
-	for elemento in lista_canzoni {
-		array_canzoni_temp.push(elemento.unwrap().file_name().into_string().unwrap());
-	}
-
-	// Se non ci sono canzoni, termina il programma
-	if array_canzoni_temp.is_empty() {
-		println!("Non ci sono canzoni nella cartella di input.");
-		return;
-	}
-
-	// Controllo se l'estensione inserita è valtida
-	match args.formato.as_str() {
-		"mp3"|"m4a"|"flac"|"ogg"|"wav"|"aac"|"m4b"|"oga"|"opus"|"webm"=>println!("{}", args.formato),
-		_=>{
-			println!("Formato non supportato");
-			return
+		// Se il numero di thread è 0, termina il programma
+		if threadcount == 0 {
+			println!("Numero di thread invalido, inserire un numero maggiore di 0");
+			return;
 		}
-	}
-
-	// Instanzio la struct
-	// Nelle prossime versioni trasformerò tutto in una Lista
-	let dati_condivisi:Canzoni = Canzoni {
-		vettore_canzoni: array_canzoni_temp.clone(),
-		posizione: 0,
-		input_folder: input_folder_arg,
-		output_folder: output_folder_arg,
-		program: args.program,
-		sovrascrivi: args.sovrascrivi,
-		formato: args.formato
-	};
-
-	// Instanzio il lucchetto Mutex che usero per accedere ai dati condivisi
-	let mutex_lock: Arc<Mutex<Canzoni>> = Arc::new(Mutex::new(dati_condivisi));
-
-	// Inizio ciclo dei thread
-	ciclo_threads(threadcount, mutex_lock, array_canzoni_temp.len());
+	
+		// Controllo se esiste la cartella di input
+		if !Path::new(input_folder_arg.clone().as_str()).exists() {
+			println!("La cartella di input non esiste");
+			return;
+		}
+	
+		// Creo la cartella di output nel caso non esiste, se esiste continua
+		let output_folder_result = fs::create_dir_all(output_folder_arg.clone());
+		if output_folder_result.is_ok() || Path::new(output_folder_arg.clone().as_str()).exists() {
+			println!("Cartella output creata: {}", output_folder_arg)
+		} else {
+			println!("Cartella output non creata: {}", output_folder_arg);
+			return;
+		}
+	
+		// Creo una lista iteratore di stringhe con le canzoni
+		let lista_canzoni = fs::read_dir(input_folder_arg.clone()).unwrap();
+		
+		let mut array_canzoni_temp:Vec<String> = vec![];
+		// La converto in un array, altrimenti non riesco a passarla ai thread
+		for elemento in lista_canzoni {
+			array_canzoni_temp.push(elemento.unwrap().file_name().into_string().unwrap());
+		}
+	
+		// Se non ci sono canzoni, termina il programma
+		if array_canzoni_temp.is_empty() {
+			println!("Non ci sono canzoni nella cartella di input.");
+			return;
+		}
+	
+		// Controllo se l'estensione inserita è valtida
+		match args.formato.as_str() {
+			"mp3"|"m4a"|"flac"|"ogg"|"wav"|"aac"|"m4b"|"oga"|"opus"|"webm"=>println!("{}", args.formato),
+			_=>{
+				println!("Formato non supportato");
+				return
+			}
+		}
+	
+		// Instanzio la struct
+		// Nelle prossime versioni trasformerò tutto in una Lista
+		let dati_condivisi:Canzoni = Canzoni {
+			vettore_canzoni: array_canzoni_temp.clone(),
+			posizione: 0,
+			input_folder: input_folder_arg,
+			output_folder: output_folder_arg,
+			program: args.program,
+			sovrascrivi: args.sovrascrivi,
+			formato: args.formato
+		};
+	
+		// Instanzio il lucchetto Mutex che usero per accedere ai dati condivisi
+		let mutex_lock: Arc<Mutex<Canzoni>> = Arc::new(Mutex::new(dati_condivisi));
+	
+		// Inizio ciclo dei thread
+		ciclo_threads(threadcount, mutex_lock, array_canzoni_temp.len());
 }
 
 fn ciclo_threads(threadcount: usize, mutex_lock: Arc<Mutex<Canzoni>>, numero_canzoni:usize) {
