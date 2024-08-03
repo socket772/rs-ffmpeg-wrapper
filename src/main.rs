@@ -48,8 +48,6 @@ struct Args {
 struct Canzoni {
 	// Vettore delle canzoni
 	vettore_canzoni: Vec<String>,
-	// Numero di canzoni nella lista
-	numero_canzoni: usize,
 	// Contatore di posizione
 	posizione: usize,
 	// Cartella di input
@@ -96,23 +94,17 @@ fn main() {
 	// Creo una lista iteratore di stringhe con le canzoni
 	let lista_canzoni = fs::read_dir(input_folder_arg.clone()).unwrap();
 	
-	let mut array_canzoni_temp:Vec<String> = vec!["".to_string()];
+	let mut array_canzoni_temp:Vec<String> = vec![];
 	// La converto in un array, altrimenti non riesco a passarla ai thread
 	for elemento in lista_canzoni {
 		array_canzoni_temp.push(elemento.unwrap().file_name().into_string().unwrap());
 	}
 
-	// Perndo il numero di canzoni nella cartella
-	let numero_canzoni = array_canzoni_temp.len();
-
 	// Se non ci sono canzoni, termina il programma
-	if numero_canzoni == 0 {
+	if array_canzoni_temp.is_empty() {
 		println!("Non ci sono canzoni nella cartella di input.");
 		return;
 	}
-
-	// Recupero percorso di ffmpeg
-	let program = args.program;
 
 	// Controllo se l'estensione inserita è valtida
 	match args.formato.as_str() {
@@ -126,12 +118,11 @@ fn main() {
 	// Instanzio la struct
 	// Nelle prossime versioni trasformerò tutto in una Lista
 	let dati_condivisi:Canzoni = Canzoni {
-		vettore_canzoni: array_canzoni_temp,
-		numero_canzoni: numero_canzoni,
+		vettore_canzoni: array_canzoni_temp.clone(),
 		posizione: 0,
 		input_folder: input_folder_arg,
 		output_folder: output_folder_arg,
-		program: program,
+		program: args.program,
 		sovrascrivi: args.sovrascrivi,
 		formato: args.formato
 	};
@@ -140,7 +131,7 @@ fn main() {
 	let mutex_lock: Arc<Mutex<Canzoni>> = Arc::new(Mutex::new(dati_condivisi));
 
 	// Inizio ciclo dei thread
-	ciclo_threads(threadcount, mutex_lock, numero_canzoni);
+	ciclo_threads(threadcount, mutex_lock, array_canzoni_temp.len());
 }
 
 fn ciclo_threads(threadcount: usize, mutex_lock: Arc<Mutex<Canzoni>>, numero_canzoni:usize) {
@@ -155,7 +146,7 @@ fn ciclo_threads(threadcount: usize, mutex_lock: Arc<Mutex<Canzoni>>, numero_can
 			
 			// Ciclo che passa tutte le canzoni se necessario, quasi garantito che esca prima
 			for _ in 0..numero_canzoni {
-				let result = thread_operation(&mutex_lock);
+				let result = thread_operation(&mutex_lock, numero_canzoni);
 				if result == 1 {
 					break;
 				}
@@ -172,13 +163,12 @@ fn ciclo_threads(threadcount: usize, mutex_lock: Arc<Mutex<Canzoni>>, numero_can
 }
 
 // questa funzione contiene il codice eseguito dai thread
-fn thread_operation(mutex_lock: &Arc<Mutex<Canzoni>>) -> i32 {
+fn thread_operation(mutex_lock: &Arc<Mutex<Canzoni>>, numero_canzoni:usize) -> i32 {
 	// prendo il lucchetto mutex_lock
 	let mut dati_condivisi = mutex_lock.lock().unwrap();
 
 	// Copio le variabili che mi servono dalla struct
 	let posizione_temp = dati_condivisi.posizione;
-	let numero_canzoni_temp = dati_condivisi.numero_canzoni;
 	let vettore_canzoni_temp = dati_condivisi.vettore_canzoni.clone();
 	let input_folder = dati_condivisi.input_folder.clone();
 	let output_folder = dati_condivisi.output_folder.clone();
@@ -188,7 +178,7 @@ fn thread_operation(mutex_lock: &Arc<Mutex<Canzoni>>) -> i32 {
 
 	
 	// Controllo se ci sono altre canzoni da convertire
-	if posizione_temp >= numero_canzoni_temp {
+	if posizione_temp >= numero_canzoni {
 		drop(dati_condivisi);
 		return 1;
 	}
@@ -201,7 +191,7 @@ fn thread_operation(mutex_lock: &Arc<Mutex<Canzoni>>) -> i32 {
 	let nome_canzone = vettore_canzoni_temp[posizione_temp].clone();
 
 	// Annuncio inizio canzone
-	println!("Iniziata `{}` {}/{}", nome_canzone, posizione_temp+1, numero_canzoni_temp);
+	println!("Iniziata `{}` {}/{}", nome_canzone, posizione_temp+1, numero_canzoni);
 
 	// Creo il percorso del file di input e output
 	let canzone_input_path = format!("{}/{}", input_folder, nome_canzone);
@@ -229,7 +219,7 @@ fn thread_operation(mutex_lock: &Arc<Mutex<Canzoni>>) -> i32 {
 		println!("Errore nel thread, esco");
 		return -1;
 	} else {
-		println!("Finito `{}` {}/{}", nome_canzone, posizione_temp+1, numero_canzoni_temp);
+		println!("Finito `{}` {}/{}", nome_canzone, posizione_temp+1, numero_canzoni);
 		return 0;
 	}
 }
