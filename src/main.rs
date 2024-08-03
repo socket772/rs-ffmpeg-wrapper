@@ -4,6 +4,7 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::process::Command;
 use std::thread::{self};
+use iced;
 
 static DEFAULT_INPUT:&str = "./input";
 static DEFAULT_OUTPUT:&str = "./output";
@@ -138,9 +139,13 @@ fn main() {
 	// Instanzio il lucchetto Mutex che usero per accedere ai dati condivisi
 	let mutex_lock: Arc<Mutex<Canzoni>> = Arc::new(Mutex::new(dati_condivisi));
 
+	// Inizio ciclo dei thread
+	ciclo_threads(threadcount, mutex_lock, numero_canzoni);
+}
+
+fn ciclo_threads(threadcount: usize, mutex_lock: Arc<Mutex<Canzoni>>, numero_canzoni:usize) {
 	// Vettore mutabile per gestire i thread, specialmente la parte di join
 	let mut thread_vector: Vec<thread::JoinHandle<()>> = vec![];
-
 	for _ in 0..threadcount {
 		// Necessario, se no non posso utilizzarlo (capisci perchè)
 		let mutex_lock = mutex_lock.clone();
