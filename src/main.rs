@@ -1,6 +1,8 @@
 use clap::Parser;
-use iced::widget::{row, Button, Container, TextInput};
-use iced::{Sandbox, Settings};
+use iced::font::Style;
+use iced::theme::Svg;
+use iced::widget::{image, row, svg, Button, Container, Image, TextInput};
+use iced::{Font, Renderer, Sandbox, Settings, Theme};
 use std::env::{self};
 use std::fs;
 use std::path::Path;
@@ -8,6 +10,7 @@ use std::sync::{Arc, Mutex};
 use std::process::Command;
 use std::thread::{self};
 use iced::widget::column;
+use iced::Length::Fill;
 
 static DEFAULT_INPUT:&str = "./input";
 static DEFAULT_OUTPUT:&str = "./output";
@@ -77,9 +80,10 @@ struct Gui {
 	num_canzoni: usize,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 enum GuiMessage {
 	Start,
+	InputText(String),
 }
 
 impl Sandbox for Gui {
@@ -119,17 +123,35 @@ impl Sandbox for Gui {
 	
 	fn update(&mut self, message: Self::Message) {
 			match message {
-				GuiMessage::Start => println!("Starting"),				
+				GuiMessage::Start => {
+					println!("Start")
+				},
+				GuiMessage::InputText(_) => {
+					println!("InputText")
+				},
 			}
 		}
 	
 	fn view(&self) -> iced::Element<'_, Self::Message> {
 
-			//let row_input = row![];
+		// Icons from https://www.svgrepo.com/collection/files-and-folders-flat-icons/
 
-			let start_button = Button::new("Start").on_press(GuiMessage::Start);
+		let input_text: TextInput<GuiMessage> = TextInput::new("placeholder", "value");
+		
+		let handle = svg::Handle::from_path(format!(
+			"{}/resources/data-file-folder-svgrepo-com.svg",
+			env!("CARGO_MANIFEST_DIR")
+		));
 
-			let col = column![start_button];
+		let svg: svg::Svg<> = svg(handle).width(35).height(35);
+
+
+		let row_input = row![input_text, svg];
+		
+
+		let start_button = Button::new("Start").on_press(GuiMessage::Start);
+
+		let col = column![row_input, start_button];
 
 		return Container::new(col).center_x().center_y().width(iced::Length::Fill).height(iced::Length::Fill).into()
 		}
@@ -143,12 +165,8 @@ fn main() {
 	}
 	else {
 		println!("Running in gui mode");
-		main_gui();
+		let _ = Gui::run(Settings::default());
 	}
-}
-
-fn main_gui() {
-	let _ = Gui::run(Settings::default());
 }
 
 fn main_headless() {
@@ -180,18 +198,15 @@ fn main_headless() {
 		}
 	
 		// Creo una lista iteratore di stringhe con le canzoni
-		let lista_canzoni = fs::read_dir(input_folder_arg.clone()).unwrap();
-		
-		let mut array_canzoni_temp:Vec<String> = vec![];
-		// La converto in un array, altrimenti non riesco a passarla ai thread
-		for elemento in lista_canzoni {
-			array_canzoni_temp.push(elemento.unwrap().file_name().into_string().unwrap());
-		}
+		let array_canzoni_temp = get_song_list(input_folder_arg.clone());
 	
 		// Se non ci sono canzoni, termina il programma
 		if array_canzoni_temp.is_empty() {
 			println!("Non ci sono canzoni nella cartella di input.");
 			return;
+		}
+		else {
+			println!("Ci sono canzoni nella cartella di input.");
 		}
 	
 		// Controllo se l'estensione inserita è valtida
@@ -310,4 +325,17 @@ fn thread_operation(mutex_lock: &Arc<Mutex<Canzoni>>, numero_canzoni:usize) -> i
 		println!("Finito `{}` {}/{}", nome_canzone, posizione_temp+1, numero_canzoni);
 		return 0;
 	}
+}
+
+fn get_song_list(input_folder_arg: String) -> Vec<String> {
+	// Creo una lista iteratore di stringhe con le canzoni
+	let lista_canzoni = fs::read_dir(input_folder_arg.clone()).unwrap();
+
+	let mut array_canzoni_temp:Vec<String> = vec![];
+	// La converto in un array, altrimenti non riesco a passarla ai thread
+	for elemento in lista_canzoni {
+		array_canzoni_temp.push(elemento.unwrap().file_name().into_string().unwrap());
+	}
+
+	return array_canzoni_temp;
 }
