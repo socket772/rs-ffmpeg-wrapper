@@ -1,3 +1,5 @@
+#![allow(clippy::needless_return)]
+
 use clap::Parser;
 use iced::font::Style;
 use iced::theme::Svg;
