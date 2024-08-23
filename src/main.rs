@@ -13,8 +13,10 @@ use std::thread::{self};
 use iced::widget::column;
 use iced::Length::Fill;
 
-static DEFAULT_INPUT:&str = "./input";
-static DEFAULT_OUTPUT:&str = "./output";
+// Variabili globali
+const DEFAULT_INPUT:&str = "./input";
+const DEFAULT_OUTPUT:&str = "./output";
+const FORMATS: [&str; 10] = ["mp3","m4a","flac","ogg","wav","aac","m4b","oga","opus","webm"];
 
 #[derive(Parser, Debug)]
 #[command(version, about, about = "Utility scritta in rust per convertire in massa file multimediali in mp3 usando il multi threading")]
@@ -81,18 +83,6 @@ struct Gui {
 	num_canzoni: usize,
 }
 
-enum Formats {
-	"mp3",
-	"m4a",
-	"flac",
-	"ogg",
-	"wav",
-	"aac",
-	"m4b",
-	"oga",
-	"opus",
-	"webm",
-}
 
 #[derive(Debug, Clone)]
 enum GuiMessage {
@@ -161,7 +151,7 @@ impl Sandbox for Gui {
 
 			let output_text: TextInput<GuiMessage> = TextInput::new("placeholder", self.input_folder.as_str()).on_input(GuiMessage::InputFolder);
 
-			let format_option: SelectionList<GuiMessage> = SelectionList::new(options, on_selected);
+			//let format_option: SelectionList<GuiMessage> = SelectionList::new(options, on_selected);
 			
 			let start_button = Button::new("Start").on_press(GuiMessage::Start);
 
@@ -224,12 +214,16 @@ fn main_headless() {
 		}
 	
 		// Controllo se l'estensione inserita è valtida
-		match args.formato.as_str() {
-			"mp3"|"m4a"|"flac"|"ogg"|"wav"|"aac"|"m4b"|"oga"|"opus"|"webm"=>println!("{}", args.formato),
-			_=>{
-				println!("Formato non supportato");
-				return
-			}
+		let mut ext_is_valid: bool = false;
+		for format in FORMATS {
+			if args.formato.as_str() == format {
+					ext_is_valid = true;
+					break;
+				}
+		}
+		if !ext_is_valid{
+			println!("Formato non supportato");
+			return
 		}
 	
 		// Instanzio la struct
