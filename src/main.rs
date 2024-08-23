@@ -3,6 +3,7 @@ use iced::font::Style;
 use iced::theme::Svg;
 use iced::widget::{image, row, svg, Button, Container, Image, TextInput};
 use iced::{Font, Renderer, Sandbox, Settings, Theme};
+use iced_aw::SelectionList;
 use std::env::{self};
 use std::fs;
 use std::path::Path;
@@ -80,10 +81,26 @@ struct Gui {
 	num_canzoni: usize,
 }
 
+enum Formats {
+	"mp3",
+	"m4a",
+	"flac",
+	"ogg",
+	"wav",
+	"aac",
+	"m4b",
+	"oga",
+	"opus",
+	"webm",
+}
+
 #[derive(Debug, Clone)]
 enum GuiMessage {
 	Start,
-	InputText(String),
+	InputFolder(String),
+	OutputFolder(String),
+	FileFormat(String),
+	ThreadNumber(String),
 }
 
 impl Sandbox for Gui {
@@ -110,10 +127,10 @@ impl Sandbox for Gui {
 	
 	fn new() -> Self {
 			Gui {
-				input_folder: "./input".to_string(),
-				output_folder: "./output".to_string(),
-				threads: num_cpus::get(),
-				num_canzoni: 0 
+				input_folder: "./input".to_owned(),
+				output_folder: "./output".to_owned(),
+				threads: num_cpus::get().to_owned(),
+				num_canzoni: 0.to_owned()
 			}
 		}
 	
@@ -124,36 +141,33 @@ impl Sandbox for Gui {
 	fn update(&mut self, message: Self::Message) {
 			match message {
 				GuiMessage::Start => {
-					println!("Start")
+					println!("Start");
 				},
-				GuiMessage::InputText(_) => {
-					println!("InputText")
+				GuiMessage::InputFolder(value) => {
+					self.input_folder = value;
+				},
+				GuiMessage::OutputFolder(_) => {
+				},
+				GuiMessage::FileFormat(_) => {
+				},
+				GuiMessage::ThreadNumber(_) => {
 				},
 			}
 		}
 	
 	fn view(&self) -> iced::Element<'_, Self::Message> {
 
-		// Icons from https://www.svgrepo.com/collection/files-and-folders-flat-icons/
+			let input_text: TextInput<GuiMessage> = TextInput::new("placeholder", self.input_folder.as_str()).on_input(GuiMessage::InputFolder);
 
-		let input_text: TextInput<GuiMessage> = TextInput::new("placeholder", "value");
-		
-		let handle = svg::Handle::from_path(format!(
-			"{}/resources/data-file-folder-svgrepo-com.svg",
-			env!("CARGO_MANIFEST_DIR")
-		));
+			let output_text: TextInput<GuiMessage> = TextInput::new("placeholder", self.input_folder.as_str()).on_input(GuiMessage::InputFolder);
 
-		let svg: svg::Svg<> = svg(handle).width(35).height(35);
+			let format_option: SelectionList<GuiMessage> = SelectionList::new(options, on_selected);
+			
+			let start_button = Button::new("Start").on_press(GuiMessage::Start);
 
+			let col = column![input_text, output_text, start_button];
 
-		let row_input = row![input_text, svg];
-		
-
-		let start_button = Button::new("Start").on_press(GuiMessage::Start);
-
-		let col = column![row_input, start_button];
-
-		return Container::new(col).center_x().center_y().width(iced::Length::Fill).height(iced::Length::Fill).into()
+			return Container::new(col).center_x().width(iced::Length::Fill).into()
 		}
 }
 
