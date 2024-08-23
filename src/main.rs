@@ -1,10 +1,8 @@
 #![allow(clippy::needless_return)]
 
 use clap::Parser;
-use iced::font::Style;
-use iced::theme::Svg;
-use iced::widget::{image, row, svg, Button, Container, Image, TextInput};
-use iced::{Font, Renderer, Sandbox, Settings, Theme};
+use iced::widget::{Button, Container, TextInput};
+use iced::{Sandbox, Settings};
 use iced_aw::SelectionList;
 use std::env::{self};
 use std::fs;
@@ -13,7 +11,6 @@ use std::sync::{Arc, Mutex};
 use std::process::Command;
 use std::thread::{self};
 use iced::widget::column;
-use iced::Length::Fill;
 
 // Variabili globali
 const DEFAULT_INPUT:&str = "./input";
