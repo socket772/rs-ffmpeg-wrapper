@@ -15,7 +15,7 @@ use std::{fs, usize};
 // Variabili globali
 const DEFAULT_INPUT: &str = "./input";
 const DEFAULT_OUTPUT: &str = "./output";
-const FORMATS: &[&str] = &[
+const FORMATS: [&str; 10] = [
     "mp3", "m4a", "flac", "ogg", "wav", "aac", "m4b", "oga", "opus", "webm",
 ];
 
@@ -244,7 +244,7 @@ fn main_headless() {
     // Controllo se l'estensione inserita è valtida
     let mut ext_is_valid: bool = false;
     for format in FORMATS {
-        if args.formato.as_str() == *format {
+        if args.formato.as_str() == format {
             ext_is_valid = true;
             break;
         }
