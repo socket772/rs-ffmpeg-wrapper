@@ -3,8 +3,9 @@
 use clap::Parser;
 use iced::widget::column;
 use iced::widget::{Button, Column, Container, TextInput};
-use iced::{Length, Sandbox, Settings};
-use iced_aw::SelectionList;
+use iced::{alignment, Length, Sandbox, Settings};
+use iced_aw::widgets::NumberInput;
+use iced_aw::{number_input, SelectionList};
 use std::env::{self};
 use std::path::Path;
 use std::process::Command;
@@ -152,7 +153,6 @@ impl Sandbox for Gui {
     fn update(&mut self, message: Self::Message) {
         match message {
             GuiMessage::Start => {
-                println!("Start");
                 println!("{:?}", self);
             }
             GuiMessage::InputFolder(value) => {
@@ -165,27 +165,41 @@ impl Sandbox for Gui {
                 self.format_index = index;
                 self.format_selected = format;
             }
-            GuiMessage::ThreadNumber(_) => {}
+            GuiMessage::ThreadNumber(number) => {
+                self.threads = number;
+            }
         }
     }
 
     fn view(&self) -> iced::Element<'_, Self::Message> {
         let input_text: TextInput<GuiMessage> =
             TextInput::new("input folder here", self.input_folder.as_str())
-                .on_input(GuiMessage::InputFolder);
+                .on_input(GuiMessage::InputFolder)
+                .padding(10);
 
         let output_text: TextInput<GuiMessage> =
             TextInput::new("output folder here", self.output_folder.as_str())
-                .on_input(GuiMessage::OutputFolder);
+                .on_input(GuiMessage::OutputFolder)
+                .padding(10);
+
+        let thread_number = number_input(self.threads, 4096, GuiMessage::ThreadNumber)
+            .padding(10.0)
+            .step(1)
+            .bounds((1, 4096));
 
         let format_option: SelectionList<String, GuiMessage> =
-            SelectionList::new(&self.formats, GuiMessage::Format)
-                .height(Length::Fixed(100.0))
-                .width(iced::Length::Shrink);
+            SelectionList::new(&self.formats, GuiMessage::Format).height(Length::Fixed(100.0));
 
-        let start_button: Button<GuiMessage> = Button::new("Start").on_press(GuiMessage::Start);
+        let start_button: Button<GuiMessage> =
+            Button::new("Start").on_press(GuiMessage::Start).padding(10);
 
-        let col: Column<GuiMessage> = column![input_text, output_text, format_option, start_button];
+        let col: Column<GuiMessage> = column![
+            input_text,
+            output_text,
+            format_option,
+            thread_number,
+            start_button
+        ];
 
         return Container::new(col).center_x().into();
     }
