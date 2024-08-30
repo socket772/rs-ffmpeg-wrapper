@@ -1,7 +1,7 @@
 #![allow(clippy::needless_return)]
 
 use clap::Parser;
-use iced::widget::column;
+use iced::widget::{column, Checkbox, Text};
 use iced::widget::{Button, Column, Container, TextInput};
 use iced::{alignment, Length, Sandbox, Settings};
 use iced_aw::widgets::NumberInput;
@@ -98,6 +98,8 @@ struct Gui {
     formats: Vec<String>,
     format_index: usize,
     format_selected: String,
+    sovrascrivi: bool,
+    ffmpeg_path: String,
 }
 
 #[derive(Debug, Clone)]
@@ -107,6 +109,8 @@ enum GuiMessage {
     OutputFolder(String),
     Format(usize, String),
     ThreadNumber(usize),
+    FfmpegPath(String),
+    Sovrascrivi(bool),
 }
 
 impl Sandbox for Gui {
@@ -137,12 +141,14 @@ impl Sandbox for Gui {
             formats_final.push(formato.to_string());
         }
         Gui {
-            input_folder: "./input".to_owned(),
-            output_folder: "./output".to_owned(),
+            input_folder: "./input".to_string(),
+            output_folder: "./output".to_string(),
             threads: num_cpus::get().to_owned(),
             formats: formats_final,
             format_index: 0,
             format_selected: String::from("mp3"),
+            ffmpeg_path: "ffmpeg".to_string(),
+            sovrascrivi: false,
         }
     }
 
@@ -153,7 +159,41 @@ impl Sandbox for Gui {
     fn update(&mut self, message: Self::Message) {
         match message {
             GuiMessage::Start => {
-                println!("{:?}", self);
+                println!("DEBUG: {:?}", self);
+
+                let array_canzoni_temp = get_song_list(self.input_folder.clone());
+
+                if array_canzoni_temp.is_empty() {
+                    println!("DEBUG: Non ci sono canzoni nella cartella di input o la cartella di input non esiste.");
+                    return;
+                } else {
+                    println!("DEBUG: Ci sono canzoni nella cartella di input.");
+                }
+
+                // Creo la cartella di output nel caso non esiste, se esiste continua, altrimenti dai errore
+                let output_folder_result = fs::create_dir_all(self.output_folder.clone());
+                if output_folder_result.is_ok()
+                    || Path::new(self.output_folder.clone().as_str()).exists()
+                {
+                    println!("Cartella output creata: {}", self.output_folder)
+                } else {
+                    println!("Cartella output non creata: {}", self.output_folder);
+                    return;
+                }
+
+                let dati_condivisi: Canzoni = Canzoni {
+                    vettore_canzoni: array_canzoni_temp.clone(),
+                    posizione: 0,
+                    input_folder: self.input_folder.clone(),
+                    output_folder: self.output_folder.clone(),
+                    program: self.ffmpeg_path.clone(),
+                    sovrascrivi: self.sovrascrivi,
+                    formato: self.format_selected.clone(),
+                };
+
+                let mutex_lock: Arc<Mutex<Canzoni>> = Arc::new(Mutex::new(dati_condivisi));
+
+                ciclo_threads(self.threads, mutex_lock, array_canzoni_temp.len());
             }
             GuiMessage::InputFolder(value) => {
                 self.input_folder = value;
@@ -168,6 +208,8 @@ impl Sandbox for Gui {
             GuiMessage::ThreadNumber(number) => {
                 self.threads = number;
             }
+            GuiMessage::FfmpegPath(path) => self.ffmpeg_path = path,
+            GuiMessage::Sovrascrivi(checked) => self.sovrascrivi = checked,
         }
     }
 
@@ -182,6 +224,11 @@ impl Sandbox for Gui {
                 .on_input(GuiMessage::OutputFolder)
                 .padding(10);
 
+        let ffmpeg_text: TextInput<GuiMessage> =
+            TextInput::new("ffmpeg path here", self.ffmpeg_path.as_str())
+                .on_input(GuiMessage::FfmpegPath)
+                .padding(10);
+
         let thread_number = number_input(self.threads, 4096, GuiMessage::ThreadNumber)
             .padding(10.0)
             .step(1)
@@ -190,15 +237,24 @@ impl Sandbox for Gui {
         let format_option: SelectionList<String, GuiMessage> =
             SelectionList::new(&self.formats, GuiMessage::Format).height(Length::Fixed(100.0));
 
+        let sovrascrivi_box =
+            Checkbox::new("Sovrascrivi?", self.sovrascrivi).on_toggle(GuiMessage::Sovrascrivi);
+
         let start_button: Button<GuiMessage> =
             Button::new("Start").on_press(GuiMessage::Start).padding(10);
+
+        let status_text: Text =
+            Text::new("Ready").horizontal_alignment(alignment::Horizontal::Center);
 
         let col: Column<GuiMessage> = column![
             input_text,
             output_text,
+            ffmpeg_text,
             format_option,
+            sovrascrivi_box,
             thread_number,
-            start_button
+            start_button,
+            status_text,
         ];
 
         return Container::new(col).center_x().into();
@@ -400,11 +456,15 @@ fn thread_operation(mutex_lock: &Arc<Mutex<Canzoni>>, numero_canzoni: usize) -> 
 
 fn get_song_list(input_folder_arg: String) -> Vec<String> {
     // Creo una lista iteratore di stringhe con le canzoni
-    let lista_canzoni = fs::read_dir(input_folder_arg.clone()).unwrap();
+    let lista_canzoni = fs::read_dir(input_folder_arg.clone());
+
+    if lista_canzoni.is_err() {
+        return vec![];
+    }
 
     let mut array_canzoni_temp: Vec<String> = vec![];
     // La converto in un array, altrimenti non riesco a passarla ai thread
-    for elemento in lista_canzoni {
+    for elemento in lista_canzoni.unwrap() {
         array_canzoni_temp.push(elemento.unwrap().file_name().into_string().unwrap());
     }
 
