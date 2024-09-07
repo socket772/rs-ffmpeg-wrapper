@@ -1,17 +1,17 @@
 #![allow(clippy::needless_return)]
 
 use clap::Parser;
-use iced::widget::{column, Checkbox, Text};
+use iced::widget::column;
 use iced::widget::{Button, Column, Container, TextInput};
-use iced::{alignment, Length, Sandbox, Settings};
-use iced_aw::widgets::NumberInput;
-use iced_aw::{number_input, SelectionList};
+use iced::{Length, Sandbox, Settings};
+use iced_aw::NumberInput;
+use iced_aw::SelectionList;
 use std::env::{self};
+use std::fs;
 use std::path::Path;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
 use std::thread::{self};
-use std::{fs, usize};
 
 // Variabili globali
 const DEFAULT_INPUT: &str = "./input";
@@ -90,7 +90,7 @@ struct Canzoni {
     formato: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Gui {
     input_folder: String,
     output_folder: String,
@@ -98,8 +98,6 @@ struct Gui {
     formats: Vec<String>,
     format_index: usize,
     format_selected: String,
-    sovrascrivi: bool,
-    ffmpeg_path: String,
 }
 
 #[derive(Debug, Clone)]
@@ -109,8 +107,6 @@ enum GuiMessage {
     OutputFolder(String),
     Format(usize, String),
     ThreadNumber(usize),
-    FfmpegPath(String),
-    Sovrascrivi(bool),
 }
 
 impl Sandbox for Gui {
@@ -141,14 +137,12 @@ impl Sandbox for Gui {
             formats_final.push(formato.to_string());
         }
         Gui {
-            input_folder: "./input".to_string(),
-            output_folder: "./output".to_string(),
+            input_folder: "./input".to_owned(),
+            output_folder: "./output".to_owned(),
             threads: num_cpus::get().to_owned(),
             formats: formats_final,
             format_index: 0,
             format_selected: String::from("mp3"),
-            ffmpeg_path: "ffmpeg".to_string(),
-            sovrascrivi: false,
         }
     }
 
@@ -159,41 +153,8 @@ impl Sandbox for Gui {
     fn update(&mut self, message: Self::Message) {
         match message {
             GuiMessage::Start => {
-                println!("DEBUG: {:?}", self);
-
-                let array_canzoni_temp = get_song_list(self.input_folder.clone());
-
-                if array_canzoni_temp.is_empty() {
-                    println!("DEBUG: Non ci sono canzoni nella cartella di input o la cartella di input non esiste.");
-                    return;
-                } else {
-                    println!("DEBUG: Ci sono canzoni nella cartella di input.");
-                }
-
-                // Creo la cartella di output nel caso non esiste, se esiste continua, altrimenti dai errore
-                let output_folder_result = fs::create_dir_all(self.output_folder.clone());
-                if output_folder_result.is_ok()
-                    || Path::new(self.output_folder.clone().as_str()).exists()
-                {
-                    println!("Cartella output creata: {}", self.output_folder)
-                } else {
-                    println!("Cartella output non creata: {}", self.output_folder);
-                    return;
-                }
-
-                let dati_condivisi: Canzoni = Canzoni {
-                    vettore_canzoni: array_canzoni_temp.clone(),
-                    posizione: 0,
-                    input_folder: self.input_folder.clone(),
-                    output_folder: self.output_folder.clone(),
-                    program: self.ffmpeg_path.clone(),
-                    sovrascrivi: self.sovrascrivi,
-                    formato: self.format_selected.clone(),
-                };
-
-                let mutex_lock: Arc<Mutex<Canzoni>> = Arc::new(Mutex::new(dati_condivisi));
-
-                ciclo_threads(self.threads, mutex_lock, array_canzoni_temp.len());
+                println!("{:?}", self);
+                main_gui(self.clone());
             }
             GuiMessage::InputFolder(value) => {
                 self.input_folder = value;
@@ -208,8 +169,6 @@ impl Sandbox for Gui {
             GuiMessage::ThreadNumber(number) => {
                 self.threads = number;
             }
-            GuiMessage::FfmpegPath(path) => self.ffmpeg_path = path,
-            GuiMessage::Sovrascrivi(checked) => self.sovrascrivi = checked,
         }
     }
 
@@ -224,37 +183,24 @@ impl Sandbox for Gui {
                 .on_input(GuiMessage::OutputFolder)
                 .padding(10);
 
-        let ffmpeg_text: TextInput<GuiMessage> =
-            TextInput::new("ffmpeg path here", self.ffmpeg_path.as_str())
-                .on_input(GuiMessage::FfmpegPath)
-                .padding(10);
-
-        let thread_number = number_input(self.threads, 4096, GuiMessage::ThreadNumber)
-            .padding(10.0)
-            .step(1)
-            .bounds((1, 4096));
+        let thread_number: NumberInput<usize, GuiMessage> =
+            NumberInput::new(self.threads, 4096, GuiMessage::ThreadNumber)
+                .padding(10.0)
+                .step(1)
+                .bounds((1, 4096));
 
         let format_option: SelectionList<String, GuiMessage> =
             SelectionList::new(&self.formats, GuiMessage::Format).height(Length::Fixed(100.0));
 
-        let sovrascrivi_box =
-            Checkbox::new("Sovrascrivi?", self.sovrascrivi).on_toggle(GuiMessage::Sovrascrivi);
-
         let start_button: Button<GuiMessage> =
             Button::new("Start").on_press(GuiMessage::Start).padding(10);
-
-        let status_text: Text =
-            Text::new("Ready").horizontal_alignment(alignment::Horizontal::Center);
 
         let col: Column<GuiMessage> = column![
             input_text,
             output_text,
-            ffmpeg_text,
             format_option,
-            sovrascrivi_box,
             thread_number,
-            start_button,
-            status_text,
+            start_button
         ];
 
         return Container::new(col).center_x().into();
@@ -270,6 +216,52 @@ fn main() {
         println!("Running in gui mode");
         let _ = Gui::run(Settings::default());
     }
+}
+
+fn main_gui(data: Gui) {
+    // Controllo se esiste la cartella di input
+    if !Path::new(data.input_folder.clone().as_str()).exists() {
+        println!("La cartella di input non esiste");
+        return;
+    }
+
+    // Creo la cartella di output nel caso non esiste, se esiste continua
+    let output_folder_result = fs::create_dir_all(data.output_folder.clone());
+    if output_folder_result.is_ok() || Path::new(data.output_folder.clone().as_str()).exists() {
+        println!("Cartella output creata: {}", data.output_folder)
+    } else {
+        println!("Cartella output non creata: {}", data.output_folder);
+        return;
+    }
+
+    // Creo una lista iteratore di stringhe con le canzoni
+    let array_canzoni_temp = get_song_list(data.input_folder.clone());
+
+    // Se non ci sono canzoni, termina il programma
+    if array_canzoni_temp.is_empty() {
+        println!("Non ci sono canzoni nella cartella di input.");
+        return;
+    } else {
+        println!("Ci sono canzoni nella cartella di input.");
+    }
+
+    // Instanzio la struct
+    // Nelle prossime versioni trasformerò tutto in una Lista
+    let dati_condivisi: Canzoni = Canzoni {
+        vettore_canzoni: array_canzoni_temp.clone(),
+        posizione: 0,
+        input_folder: data.input_folder,
+        output_folder: data.output_folder,
+        program: "ffmpeg".to_string(),
+        sovrascrivi: true,
+        formato: data.format_selected,
+    };
+
+    // Instanzio il lucchetto Mutex che usero per accedere ai dati condivisi
+    let mutex_lock: Arc<Mutex<Canzoni>> = Arc::new(Mutex::new(dati_condivisi));
+
+    // Inizio ciclo dei thread
+    ciclo_threads(data.threads, mutex_lock, array_canzoni_temp.len());
 }
 
 fn main_headless() {
@@ -343,24 +335,29 @@ fn main_headless() {
     ciclo_threads(threadcount, mutex_lock, array_canzoni_temp.len());
 }
 
-fn ciclo_threads(threadcount: usize, mutex_lock: Arc<Mutex<Canzoni>>, numero_canzoni: usize) {
+fn ciclo_threads(
+    threadcount: usize,
+    mutex_lock: Arc<Mutex<Canzoni>>,
+    numero_canzoni_totali: usize,
+) {
     // Vettore mutabile per gestire i thread, specialmente la parte di join
     let mut thread_vector: Vec<thread::JoinHandle<()>> = vec![];
-    for _ in 0..threadcount {
+    for thread_id in 0..threadcount {
         // Necessario, se no non posso utilizzarlo (capisci perchè)
         let mutex_lock = mutex_lock.clone();
+
+        println!("Thread '{}' ha iniziato", thread_id);
 
         // Qui metto in nuovo thread nell'array, è come una lista.
         thread_vector.push(thread::spawn(move || {
             // Ciclo che passa tutte le canzoni se necessario, quasi garantito che esca prima
-            for _ in 0..numero_canzoni {
-                let result = thread_operation(&mutex_lock, numero_canzoni);
+            for _ in 0..numero_canzoni_totali {
+                let result = thread_operation(&mutex_lock, numero_canzoni_totali, thread_id);
                 if result == 1 {
                     break;
                 }
             }
-
-            println!("Un thread ha finito")
+            println!("Thread '{}' ha finito", thread_id);
         }));
     }
 
@@ -371,7 +368,11 @@ fn ciclo_threads(threadcount: usize, mutex_lock: Arc<Mutex<Canzoni>>, numero_can
 }
 
 // questa funzione contiene il codice eseguito dai thread
-fn thread_operation(mutex_lock: &Arc<Mutex<Canzoni>>, numero_canzoni: usize) -> i32 {
+fn thread_operation(
+    mutex_lock: &Arc<Mutex<Canzoni>>,
+    numero_canzoni: usize,
+    thread_id: usize,
+) -> i32 {
     // prendo il lucchetto mutex_lock
     let mut dati_condivisi = mutex_lock.lock().unwrap();
 
@@ -399,7 +400,8 @@ fn thread_operation(mutex_lock: &Arc<Mutex<Canzoni>>, numero_canzoni: usize) -> 
 
     // Annuncio inizio canzone
     println!(
-        "Iniziata `{}` {}/{}",
+        "Thread '{}' ha iniziato `{}` {}/{}",
+        thread_id,
         nome_canzone,
         posizione_temp + 1,
         numero_canzoni
@@ -441,11 +443,12 @@ fn thread_operation(mutex_lock: &Arc<Mutex<Canzoni>>, numero_canzoni: usize) -> 
     // Verifico risultato del comando
     if command.is_err() {
         // metti questa print fuori dalla funzione
-        println!("Errore nel thread, esco");
+        println!("Errore nel thread {}, esco", thread_id);
         return -1;
     } else {
         println!(
-            "Finito `{}` {}/{}",
+            "Thread '{}' ha finito `{}` {}/{}",
+            thread_id,
             nome_canzone,
             posizione_temp + 1,
             numero_canzoni
@@ -456,15 +459,11 @@ fn thread_operation(mutex_lock: &Arc<Mutex<Canzoni>>, numero_canzoni: usize) -> 
 
 fn get_song_list(input_folder_arg: String) -> Vec<String> {
     // Creo una lista iteratore di stringhe con le canzoni
-    let lista_canzoni = fs::read_dir(input_folder_arg.clone());
-
-    if lista_canzoni.is_err() {
-        return vec![];
-    }
+    let lista_canzoni = fs::read_dir(input_folder_arg.clone()).unwrap();
 
     let mut array_canzoni_temp: Vec<String> = vec![];
     // La converto in un array, altrimenti non riesco a passarla ai thread
-    for elemento in lista_canzoni.unwrap() {
+    for elemento in lista_canzoni {
         array_canzoni_temp.push(elemento.unwrap().file_name().into_string().unwrap());
     }
 
