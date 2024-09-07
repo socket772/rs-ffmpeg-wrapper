@@ -1,9 +1,9 @@
 #![allow(clippy::needless_return)]
 
 use clap::Parser;
-use iced::widget::column;
+use iced::widget::{column, Checkbox};
 use iced::widget::{Button, Column, Container, TextInput};
-use iced::{Length, Sandbox, Settings};
+use iced::{Length, Padding, Sandbox, Settings};
 use iced_aw::NumberInput;
 use iced_aw::SelectionList;
 use std::env::{self};
@@ -94,10 +94,12 @@ struct Canzoni {
 struct Gui {
     input_folder: String,
     output_folder: String,
+    ffmpeg_path: String,
     threads: usize,
     formats: Vec<String>,
     format_index: usize,
     format_selected: String,
+    overwrite: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -105,8 +107,10 @@ enum GuiMessage {
     Start,
     InputFolder(String),
     OutputFolder(String),
+    FfmpegPath(String),
     Format(usize, String),
     ThreadNumber(usize),
+    Overwrite(bool),
 }
 
 impl Sandbox for Gui {
@@ -137,12 +141,14 @@ impl Sandbox for Gui {
             formats_final.push(formato.to_string());
         }
         Gui {
-            input_folder: "./input".to_owned(),
-            output_folder: "./output".to_owned(),
-            threads: num_cpus::get().to_owned(),
+            input_folder: "./input".to_string(),
+            output_folder: "./output".to_string(),
+            ffmpeg_path: "ffmpeg".to_string(),
+            threads: num_cpus::get(),
             formats: formats_final,
             format_index: 0,
             format_selected: String::from("mp3"),
+            overwrite: false,
         }
     }
 
@@ -169,6 +175,12 @@ impl Sandbox for Gui {
             GuiMessage::ThreadNumber(number) => {
                 self.threads = number;
             }
+            GuiMessage::Overwrite(overwrite) => {
+                self.overwrite = overwrite;
+            }
+            GuiMessage::FfmpegPath(path) => {
+                self.ffmpeg_path = path;
+            }
         }
     }
 
@@ -183,14 +195,23 @@ impl Sandbox for Gui {
                 .on_input(GuiMessage::OutputFolder)
                 .padding(10);
 
+        let ffmpeg_path_text: TextInput<GuiMessage> =
+            TextInput::new("path of ffmpeg executable here", self.ffmpeg_path.as_str())
+                .on_input(GuiMessage::FfmpegPath)
+                .padding(10);
+
+        let format_option: SelectionList<String, GuiMessage> =
+            SelectionList::new(&self.formats, GuiMessage::Format).height(Length::Fixed(100.0));
+
         let thread_number: NumberInput<usize, GuiMessage> =
             NumberInput::new(self.threads, 4096, GuiMessage::ThreadNumber)
                 .padding(10.0)
                 .step(1)
                 .bounds((1, 4096));
 
-        let format_option: SelectionList<String, GuiMessage> =
-            SelectionList::new(&self.formats, GuiMessage::Format).height(Length::Fixed(100.0));
+        let sovrascrivi_checkbox: Checkbox<GuiMessage> = Checkbox::new("Sovrascrivi", false)
+            .on_toggle(GuiMessage::Overwrite)
+            .spacing(5);
 
         let start_button: Button<GuiMessage> =
             Button::new("Start").on_press(GuiMessage::Start).padding(10);
@@ -198,10 +219,14 @@ impl Sandbox for Gui {
         let col: Column<GuiMessage> = column![
             input_text,
             output_text,
+            ffmpeg_path_text,
             format_option,
             thread_number,
+            sovrascrivi_checkbox,
             start_button
-        ];
+        ]
+        .padding(Padding::new(10.0).left)
+        .padding(Padding::new(10.0).right);
 
         return Container::new(col).center_x().into();
     }
@@ -252,8 +277,8 @@ fn main_gui(data: Gui) {
         posizione: 0,
         input_folder: data.input_folder,
         output_folder: data.output_folder,
-        program: "ffmpeg".to_string(),
-        sovrascrivi: true,
+        program: data.ffmpeg_path.to_string(),
+        sovrascrivi: data.overwrite,
         formato: data.format_selected,
     };
 
