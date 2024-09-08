@@ -209,9 +209,10 @@ impl Sandbox for Gui {
                 .step(1)
                 .bounds((1, 4096));
 
-        let sovrascrivi_checkbox: Checkbox<GuiMessage> = Checkbox::new("Sovrascrivi", false)
-            .on_toggle(GuiMessage::Overwrite)
-            .spacing(5);
+        let sovrascrivi_checkbox: Checkbox<GuiMessage> =
+            Checkbox::new("Sovrascrivi", self.overwrite)
+                .on_toggle(GuiMessage::Overwrite)
+                .spacing(5);
 
         let start_button: Button<GuiMessage> =
             Button::new("Start").on_press(GuiMessage::Start).padding(10);
