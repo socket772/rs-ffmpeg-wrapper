@@ -253,8 +253,7 @@ fn main_gui(data: Gui) {
 
     // Creo la cartella di output nel caso non esiste, se esiste continua
     let output_folder_result = fs::create_dir_all(data.output_folder.clone());
-    if output_folder_result.is_ok() || Path::new(data.output_folder.clone().as_str()).exists() {
-    } else {
+    if output_folder_result.is_err() || !Path::new(data.output_folder.clone().as_str()).exists() {
         return;
     }
 
