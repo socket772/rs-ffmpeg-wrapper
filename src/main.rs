@@ -237,10 +237,8 @@ impl Sandbox for Gui {
 fn main() {
     let _args: Vec<_> = env::args().collect();
     if _args.len() > 1 {
-        println!("Running in headless mode");
         main_headless();
     } else {
-        println!("Running in gui mode");
         let _ = Gui::run(Settings::default());
     }
 }
