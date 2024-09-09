@@ -159,8 +159,9 @@ impl Sandbox for Gui {
     fn update(&mut self, message: Self::Message) {
         match message {
             GuiMessage::Start => {
-                println!("{:?}", self);
+                println!("Inizio conversione");
                 main_gui(self.clone());
+                println!("Fine conversione");
             }
             GuiMessage::InputFolder(value) => {
                 self.input_folder = value;
@@ -247,16 +248,13 @@ fn main() {
 fn main_gui(data: Gui) {
     // Controllo se esiste la cartella di input
     if !Path::new(data.input_folder.clone().as_str()).exists() {
-        println!("La cartella di input non esiste");
         return;
     }
 
     // Creo la cartella di output nel caso non esiste, se esiste continua
     let output_folder_result = fs::create_dir_all(data.output_folder.clone());
     if output_folder_result.is_ok() || Path::new(data.output_folder.clone().as_str()).exists() {
-        println!("Cartella output creata: {}", data.output_folder)
     } else {
-        println!("Cartella output non creata: {}", data.output_folder);
         return;
     }
 
@@ -265,10 +263,7 @@ fn main_gui(data: Gui) {
 
     // Se non ci sono canzoni, termina il programma
     if array_canzoni_temp.is_empty() {
-        println!("Non ci sono canzoni nella cartella di input.");
         return;
-    } else {
-        println!("Ci sono canzoni nella cartella di input.");
     }
 
     // Instanzio la struct
