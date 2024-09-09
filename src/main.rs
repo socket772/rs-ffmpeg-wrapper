@@ -1,8 +1,8 @@
 #![allow(clippy::needless_return)]
 
 use clap::Parser;
-use iced::widget::{column, Checkbox};
-use iced::widget::{Button, Column, Container, TextInput};
+use iced::widget::{column, row, Checkbox, Column, Row, Text};
+use iced::widget::{Button, Container, TextInput};
 use iced::{Length, Padding, Sandbox, Settings};
 use iced_aw::NumberInput;
 use iced_aw::SelectionList;
@@ -19,6 +19,8 @@ const DEFAULT_OUTPUT: &str = "./output";
 const FORMATS: [&str; 10] = [
     "mp3", "m4a", "flac", "ogg", "wav", "aac", "m4b", "oga", "opus", "webm",
 ];
+const LABEL_WIDTH: u16 = 1;
+const INPUT_WIDTH: u16 = 5;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -186,51 +188,88 @@ impl Sandbox for Gui {
     }
 
     fn view(&self) -> iced::Element<'_, Self::Message> {
+        // Sezione dedicata ai campi della cartella di input
+
+        let input_label: Text<_, _> =
+            Text::new("Cartella input:").width(Length::FillPortion(LABEL_WIDTH));
+
         let input_text: TextInput<GuiMessage> =
-            TextInput::new("input folder here", self.input_folder.as_str())
+            TextInput::new("Cartella di input qui", self.input_folder.as_str())
                 .on_input(GuiMessage::InputFolder)
-                .padding(10);
+                .width(Length::FillPortion(INPUT_WIDTH));
+
+        let input_row: Row<GuiMessage> = row!(input_label, input_text);
+
+        let input_container = Container::new(input_row);
+
+        // Sezione dedicata ai campi della cartella di output
+        let output_label = Text::new("Cartella output:").width(Length::FillPortion(LABEL_WIDTH));
 
         let output_text: TextInput<GuiMessage> =
-            TextInput::new("output folder here", self.output_folder.as_str())
+            TextInput::new("Cartella di output qui", self.output_folder.as_str())
                 .on_input(GuiMessage::OutputFolder)
-                .padding(10);
+                .width(Length::FillPortion(INPUT_WIDTH));
 
-        let ffmpeg_path_text: TextInput<GuiMessage> =
+        let output_row: Row<GuiMessage> = row!(output_label, output_text);
+
+        // Sezione percorso di ffmpeg
+        let ffmpeg_label = Text::new("Percorso ffmpeg:").width(Length::FillPortion(LABEL_WIDTH));
+
+        let ffmpeg_text: TextInput<GuiMessage> =
             TextInput::new("path of ffmpeg executable here", self.ffmpeg_path.as_str())
                 .on_input(GuiMessage::FfmpegPath)
-                .padding(10);
+                .width(Length::FillPortion(INPUT_WIDTH));
+
+        let ffmpeg_row: Row<GuiMessage> = row!(ffmpeg_label, ffmpeg_text);
+
+        // Sezione formati di output
+
+        let foramt_label =
+            Text::new("Formato file di output:").width(Length::FillPortion(LABEL_WIDTH));
 
         let format_option: SelectionList<String, GuiMessage> =
-            SelectionList::new(&self.formats, GuiMessage::Format).height(Length::Fixed(100.0));
+            SelectionList::new(&self.formats, GuiMessage::Format)
+                .height(Length::Fixed(100.0))
+                .width(Length::FillPortion(INPUT_WIDTH));
+
+        let format_col: Column<GuiMessage> = column!(foramt_label, format_option);
+
+        // Sezione numero threads
+        let thread_label = Text::new("Numero threads:").width(Length::FillPortion(LABEL_WIDTH));
 
         let thread_number: NumberInput<usize, GuiMessage> =
             NumberInput::new(self.threads, 4096, GuiMessage::ThreadNumber)
-                .padding(10.0)
                 .step(1)
-                .bounds((1, 4096));
+                .bounds((1, 4096))
+                .width(Length::FillPortion(INPUT_WIDTH));
+
+        let thread_row: Row<GuiMessage> = row!(thread_label, thread_number);
+
+        // Sezione sorvrascrittura files
 
         let sovrascrivi_checkbox: Checkbox<GuiMessage> =
             Checkbox::new("Sovrascrivi", self.overwrite)
                 .on_toggle(GuiMessage::Overwrite)
                 .spacing(5);
 
+        let sovrascrivi_row: Row<GuiMessage> = row!(sovrascrivi_checkbox);
+
         let start_button: Button<GuiMessage> =
             Button::new("Start").on_press(GuiMessage::Start).padding(10);
 
-        let col: Column<GuiMessage> = column![
-            input_text,
-            output_text,
-            ffmpeg_path_text,
-            format_option,
-            thread_number,
-            sovrascrivi_checkbox,
+        let columnt_final = column!(
+            input_container,
+            output_row,
+            ffmpeg_row,
+            format_col,
+            thread_row,
+            sovrascrivi_row,
             start_button
-        ]
+        )
         .padding(Padding::new(10.0).left)
         .padding(Padding::new(10.0).right);
 
-        return Container::new(col).center_x().into();
+        return Container::new(columnt_final).center_x().into();
     }
 }
 
