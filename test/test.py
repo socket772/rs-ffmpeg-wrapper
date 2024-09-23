@@ -29,10 +29,10 @@ if pausa not in ["y", "n"]:
 def test_1():
 	for estensione in estensioni:
 		print("Inizio test sull'estensione " + estensione + ", usando il numero di thread di default")
-		subprocess.run(["cargo", "run", "-q", "--", "-i", cartella_input, "-o", cartella_output+"/debug_allformats_no_t", "-f", estensione])
+		subprocess.run(["cargo", "run", "-q", "--release", "--", "-i", cartella_input, "-o", cartella_output+"/allformats_no_t", "-f", estensione])
 
 		print("Inizio test sull'estensione " + estensione + ", usando il numero specificato")
-		subprocess.run(["cargo", "run", "-q", "--", "-i", cartella_input, "-o", cartella_output+"/debug_allformats_t", "-f", estensione, "-t", threads])
+		subprocess.run(["cargo", "run", "-q", "--release", "--", "-i", cartella_input, "-o", cartella_output+"/allformats_t", "-f", estensione, "-t", threads])
 
 	print("Test 1 finito")
 	if pausa == "y":
@@ -42,10 +42,10 @@ def test_1():
 def test_2():
 	for estensione in estensioni:
 		print("Inizio test sull'estensione " + estensione + ", usando il numero di thread di default")
-		subprocess.run(["cargo", "run", "-q", "--", "-i", cartella_input, "-o", cartella_output+"/debug_allformats_no_t", "-f", estensione])
+		subprocess.run(["cargo", "run", "-q", "--release", "--", "-i", cartella_input, "-o", cartella_output+"/allformats_no_t", "-f", estensione])
 
 		print("Inizio test sull'estensione " + estensione + ", usando il numero specificato")
-		subprocess.run(["cargo", "run", "-q", "--", "-i", cartella_input, "-o", cartella_output+"/debug_allformats_t", "-f", estensione, "-t", threads])
+		subprocess.run(["cargo", "run", "-q", "--release", "--", "-i", cartella_input, "-o", cartella_output+"/allformats_t", "-f", estensione, "-t", threads])
 
 	print("Test 2 finito")
 	if pausa == "y":
@@ -55,10 +55,10 @@ def test_2():
 def test_3():
 	for estensione in estensioni:
 		print("Inizio test sull'estensione " + estensione + ", usando il numero di thread di default")
-		subprocess.run(["cargo", "run", "-q", "--", "-i", cartella_input, "-o", cartella_output+"/debug_allformats_no_t", "-f", estensione, "-s"])
+		subprocess.run(["cargo", "run", "-q", "--release", "--", "-i", cartella_input, "-o", cartella_output+"/allformats_no_t", "-f", estensione, "-s"])
 
 		print("Inizio test sull'estensione " + estensione + ", usando il numero specificato")
-		subprocess.run(["cargo", "run", "-q", "--", "-i", cartella_input, "-o", cartella_output+"/debug_allformats_t", "-f", estensione, "-t", threads, "-s"])
+		subprocess.run(["cargo", "run", "-q", "--release", "--", "-i", cartella_input, "-o", cartella_output+"/allformats_t", "-f", estensione, "-t", threads, "-s"])
 
 	print("Test 3 finito")
 	if pausa == "y":
