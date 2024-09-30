@@ -224,7 +224,7 @@ impl Gui {
         let thread_label = Text::new("Numero threads:").width(Length::FillPortion(LABEL_WIDTH));
 
         let thread_number: NumberInput<usize, GuiMessage> =
-            NumberInput::new(self.threads, 1..4096, GuiMessage::ThreadNumber)
+            NumberInput::new(self.threads, 1..4097, GuiMessage::ThreadNumber)
                 .step(1)
                 .width(Length::FillPortion(INPUT_WIDTH));
 
