@@ -1,8 +1,7 @@
 #![allow(clippy::needless_return)]
 
 use clap::Parser;
-use iced::widget::Theme;
-use iced::widget::{column, row, Button, Checkbox, Column, Container, Row, Text, TextInput};
+use iced::widget::{column, row, Button, Checkbox, Column, Container, Row, Text, TextInput, Theme};
 use iced::{Length, Padding, Task};
 use iced_aw::NumberInput;
 use iced_aw::SelectionList;
@@ -10,7 +9,6 @@ use std::env::{self};
 use std::fs;
 use std::path::Path;
 use std::process::Command;
-use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use std::thread::{self};
 
@@ -122,7 +120,7 @@ impl Gui {
     }
 
     fn title(&self) -> String {
-        String::from_str("rs-ffmpeg-wrapper GUI").unwrap()
+        String::from("rs-ffmpeg-wrapper GUI")
     }
 
     fn new() -> (Self, Task<GuiMessage>) {
