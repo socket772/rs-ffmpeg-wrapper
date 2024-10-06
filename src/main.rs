@@ -1,9 +1,6 @@
-#![allow(clippy::needless_return)]
-
 use clap::Parser;
-use iced::widget::{column, row, Checkbox, Column, Row, Text};
-use iced::widget::{Button, Container, TextInput};
-use iced::{Length, Padding, Sandbox, Settings};
+use iced::widget::{column, row, Button, Checkbox, Column, Container, Row, Text, TextInput, Theme};
+use iced::{Length, Padding, Task};
 use iced_aw::NumberInput;
 use iced_aw::SelectionList;
 use std::env::{self};
@@ -92,7 +89,7 @@ struct Canzoni {
     formato: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 struct Gui {
     input_folder: String,
     output_folder: String,
@@ -115,34 +112,21 @@ enum GuiMessage {
     Overwrite(bool),
 }
 
-impl Sandbox for Gui {
-    type Message = GuiMessage;
-
-    fn theme(&self) -> iced::Theme {
-        iced::Theme::default()
+impl Gui {
+    fn theme(&self) -> Theme {
+        Theme::default()
     }
 
-    fn style(&self) -> iced::theme::Application {
-        iced::theme::Application::default()
+    fn title(&self) -> String {
+        String::from("rs-ffmpeg-wrapper GUI")
     }
 
-    fn scale_factor(&self) -> f64 {
-        1.0
-    }
-
-    fn run(settings: iced::Settings<()>) -> Result<(), iced::Error>
-    where
-        Self: 'static + Sized,
-    {
-        <Self as iced::Application>::run(settings)
-    }
-
-    fn new() -> Self {
+    fn new() -> (Self, Task<GuiMessage>) {
         let mut formats_final: Vec<String> = vec![];
         for formato in FORMATS {
             formats_final.push(formato.to_string());
         }
-        Gui {
+        let gui = Gui {
             input_folder: "./input".to_string(),
             output_folder: "./output".to_string(),
             ffmpeg_path: "ffmpeg".to_string(),
@@ -151,18 +135,16 @@ impl Sandbox for Gui {
             format_index: 0,
             format_selected: String::from("mp3"),
             overwrite: false,
-        }
+        };
+
+        (gui, Task::none())
     }
 
-    fn title(&self) -> String {
-        String::from("rs-ffmpeg-wrapper GUI")
-    }
-
-    fn update(&mut self, message: Self::Message) {
+    fn update(&mut self, message: GuiMessage) {
         match message {
             GuiMessage::Start => {
                 println!("Inizio conversione");
-                main_gui(self.clone());
+                runner_gui(self.clone());
                 println!("Fine conversione");
             }
             GuiMessage::InputFolder(value) => {
@@ -187,7 +169,7 @@ impl Sandbox for Gui {
         }
     }
 
-    fn view(&self) -> iced::Element<'_, Self::Message> {
+    fn view(&self) -> iced::Element<'_, GuiMessage> {
         // Sezione dedicata ai campi della cartella di input
 
         let input_label: Text<_, _> =
@@ -238,9 +220,8 @@ impl Sandbox for Gui {
         let thread_label = Text::new("Numero threads:").width(Length::FillPortion(LABEL_WIDTH));
 
         let thread_number: NumberInput<usize, GuiMessage> =
-            NumberInput::new(self.threads, 4096, GuiMessage::ThreadNumber)
+            NumberInput::new(self.threads, 1..4097, GuiMessage::ThreadNumber)
                 .step(1)
-                .bounds((1, 4096))
                 .width(Length::FillPortion(INPUT_WIDTH));
 
         let thread_row: Row<GuiMessage> = row!(thread_label, thread_number);
@@ -269,7 +250,7 @@ impl Sandbox for Gui {
         .padding(Padding::new(10.0).left)
         .padding(Padding::new(10.0).right);
 
-        return Container::new(columnt_final).center_x().into();
+        return Container::new(columnt_final).into();
     }
 }
 
@@ -278,11 +259,13 @@ fn main() {
     if _args.len() > 1 {
         main_headless();
     } else {
-        let _ = Gui::run(Settings::default());
+        let _ = iced::application(Gui::title, Gui::update, Gui::view)
+            .theme(Gui::theme)
+            .run_with(Gui::new);
     }
 }
 
-fn main_gui(data: Gui) {
+fn runner_gui(data: Gui) {
     // Controllo se esiste la cartella di input
     if !Path::new(data.input_folder.clone().as_str()).exists() {
         return;
