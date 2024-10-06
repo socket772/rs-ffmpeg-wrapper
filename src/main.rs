@@ -1,8 +1,9 @@
 use clap::Parser;
-use iced::widget::{column, row, Button, Checkbox, Column, Container, Row, Text, TextInput, Theme};
+use iced::widget::{
+    column, pick_list, row, Button, Checkbox, Container, Row, Text, TextInput, Theme,
+};
 use iced::{Length, Padding, Task};
 use iced_aw::NumberInput;
-use iced_aw::SelectionList;
 use std::env::{self};
 use std::fs;
 use std::path::Path;
@@ -17,7 +18,7 @@ const FORMATS: [&str; 10] = [
     "mp3", "m4a", "flac", "ogg", "wav", "aac", "m4b", "oga", "opus", "webm",
 ];
 const LABEL_WIDTH: u16 = 1;
-const INPUT_WIDTH: u16 = 5;
+const INPUT_WIDTH: u16 = 4;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -89,15 +90,64 @@ struct Canzoni {
     formato: String,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+enum Format {
+    #[default]
+    Mp3,
+    M4a,
+    Flac,
+    Ogg,
+    Wav,
+    Aac,
+    M4b,
+    Oga,
+    Opus,
+    Webm,
+}
+
+impl Format {
+    const ALL: [Format; 10] = [
+        Format::Mp3,
+        Format::M4a,
+        Format::Flac,
+        Format::Ogg,
+        Format::Wav,
+        Format::Aac,
+        Format::M4b,
+        Format::Oga,
+        Format::Opus,
+        Format::Webm,
+    ];
+}
+
+impl std::fmt::Display for Format {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Format::Mp3 => "mp3",
+                Format::M4a => "m4a",
+                Format::Flac => "flac",
+                Format::Ogg => "ogg",
+                Format::Wav => "wav",
+                Format::Aac => "aac",
+                Format::M4b => "m4b",
+                Format::Oga => "oga",
+                Format::Opus => "opus",
+                Format::Webm => "webm",
+            }
+        )
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 struct Gui {
     input_folder: String,
     output_folder: String,
     ffmpeg_path: String,
     threads: usize,
-    formats: Vec<String>,
-    format_index: usize,
-    format_selected: String,
+    format_selected: Option<Format>,
     overwrite: bool,
 }
 
@@ -107,7 +157,7 @@ enum GuiMessage {
     InputFolder(String),
     OutputFolder(String),
     FfmpegPath(String),
-    Format(usize, String),
+    Format(Format),
     ThreadNumber(usize),
     Overwrite(bool),
 }
@@ -122,19 +172,13 @@ impl Gui {
     }
 
     fn new() -> (Self, Task<GuiMessage>) {
-        let mut formats_final: Vec<String> = vec![];
-        for formato in FORMATS {
-            formats_final.push(formato.to_string());
-        }
         let gui = Gui {
             input_folder: "./input".to_string(),
             output_folder: "./output".to_string(),
             ffmpeg_path: "ffmpeg".to_string(),
             threads: num_cpus::get(),
-            formats: formats_final,
-            format_index: 0,
-            format_selected: String::from("mp3"),
             overwrite: false,
+            format_selected: Some(Format::Mp3),
         };
 
         (gui, Task::none())
@@ -153,9 +197,8 @@ impl Gui {
             GuiMessage::OutputFolder(value) => {
                 self.output_folder = value;
             }
-            GuiMessage::Format(index, format) => {
-                self.format_index = index;
-                self.format_selected = format;
+            GuiMessage::Format(format) => {
+                self.format_selected = Some(format);
             }
             GuiMessage::ThreadNumber(number) => {
                 self.threads = number;
@@ -182,8 +225,6 @@ impl Gui {
 
         let input_row: Row<GuiMessage> = row!(input_label, input_text);
 
-        let input_container = Container::new(input_row);
-
         // Sezione dedicata ai campi della cartella di output
         let output_label = Text::new("Cartella output:").width(Length::FillPortion(LABEL_WIDTH));
 
@@ -205,16 +246,13 @@ impl Gui {
         let ffmpeg_row: Row<GuiMessage> = row!(ffmpeg_label, ffmpeg_text);
 
         // Sezione formati di output
-
         let foramt_label =
             Text::new("Formato file di output:").width(Length::FillPortion(LABEL_WIDTH));
 
-        let format_option: SelectionList<String, GuiMessage> =
-            SelectionList::new(&self.formats, GuiMessage::Format)
-                .height(Length::Fixed(100.0))
-                .width(Length::FillPortion(INPUT_WIDTH));
+        let format_option = pick_list(Format::ALL, self.format_selected, GuiMessage::Format)
+            .width(Length::FillPortion(INPUT_WIDTH));
 
-        let format_col: Column<GuiMessage> = column!(foramt_label, format_option);
+        let format_row: Row<GuiMessage> = row!(foramt_label, format_option);
 
         // Sezione numero threads
         let thread_label = Text::new("Numero threads:").width(Length::FillPortion(LABEL_WIDTH));
@@ -238,11 +276,11 @@ impl Gui {
         let start_button: Button<GuiMessage> =
             Button::new("Start").on_press(GuiMessage::Start).padding(10);
 
-        let columnt_final = column!(
-            input_container,
+        let column_final = column!(
+            input_row,
             output_row,
             ffmpeg_row,
-            format_col,
+            format_row,
             thread_row,
             sovrascrivi_row,
             start_button
@@ -250,7 +288,7 @@ impl Gui {
         .padding(Padding::new(10.0).left)
         .padding(Padding::new(10.0).right);
 
-        return Container::new(columnt_final).into();
+        return Container::new(column_final).into();
     }
 }
 
@@ -294,7 +332,7 @@ fn runner_gui(data: Gui) {
         output_folder: data.output_folder,
         program: data.ffmpeg_path.to_string(),
         sovrascrivi: data.overwrite,
-        formato: data.format_selected,
+        formato: data.format_selected.unwrap().to_string(),
     };
 
     // Instanzio il lucchetto Mutex che usero per accedere ai dati condivisi
