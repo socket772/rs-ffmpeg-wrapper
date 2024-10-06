@@ -1,5 +1,3 @@
-#![allow(clippy::needless_return)]
-
 use clap::Parser;
 use iced::widget::{column, row, Button, Checkbox, Column, Container, Row, Text, TextInput, Theme};
 use iced::{Length, Padding, Task};
