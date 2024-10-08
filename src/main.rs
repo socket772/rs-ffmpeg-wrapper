@@ -489,7 +489,11 @@ fn thread_operation(
 
     // Creo il percorso del file di input e output
     let canzone_input_path = format!("{}/{}", input_folder, nome_canzone);
-    let canzone_output_path = format!("{}/{}.{}", output_folder, nome_canzone, formato);
+    let canzone_output_path = format!(
+        "{}/{}",
+        output_folder,
+        remove_suffix(nome_canzone.clone(), formato)
+    );
 
     // Selezione se sovrascrivere o no i file
     let mut sovrascrivi_arg = "-n";
@@ -548,4 +552,19 @@ fn get_song_list(input_folder_arg: String) -> Vec<String> {
     }
 
     return array_canzoni_temp;
+}
+
+fn remove_suffix(filename: String, formato: String) -> String {
+    let filename_vec: Vec<&str> = filename.split(".").collect();
+    let mut final_string = String::new();
+
+    for i in 0..filename_vec.len() {
+        if i == (filename_vec.len() - 1) {
+            final_string = final_string + "." + &formato;
+        } else {
+            final_string = filename_vec[i].to_owned() + "";
+        }
+    }
+
+    return final_string;
 }
